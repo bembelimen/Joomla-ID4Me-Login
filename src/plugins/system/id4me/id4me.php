@@ -25,7 +25,7 @@ class PlgSystemId4me extends CMSPlugin
 
 	public function onBeforeRender()
 	{
-		$issuer = $this->getIssuer('idtest1.domainid.community');
+		$issuer = $this->getIssuerbyIdentifier('idtest1.domainid.community');
 
 		if (!$issuer)
 		{
@@ -108,7 +108,7 @@ class PlgSystemId4me extends CMSPlugin
 	 *
 	 * @since 1.0.0
 	 */
-	private function getIssuerFromHostname($hostname)
+	private function getIssuerbyHostname($hostname)
 	{
 		$hostname = '_openid.' . $hostname;
 		$records = dns_get_record($hostname, DNS_TXT);
@@ -146,10 +146,10 @@ class PlgSystemId4me extends CMSPlugin
 	 *
 	 * @since 1.0.0
 	 */
-	protected function getIssuerFromIdentifier($identifier)
+	protected function getIssuerbyIdentifier($identifier)
 	{
 
-		$result = $this->getIssuerFromHostname($identifier);
+		$result = $this->getIssuerbyHostname($identifier);
 
 		if (!is_bool($result))
 		{
