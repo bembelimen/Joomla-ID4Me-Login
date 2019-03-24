@@ -109,42 +109,62 @@ class PlgSystemId4me extends CMSPlugin
     }
 
 	/**
+	 * Try to read the issuer information from the DNS TXT Record.
 	 *
-	 * @param string $identifier  The identifier/Domain of the user to authenticate
+	 * @param  string  $hostname  The identifier/Domain of the user to authenticate
+	 *
+	 * @since 1.0.0
 	 */
-	protected function getIssuer($identifier, $type = DNS_TXT)
+	private function getIssuerFromHostname($hostname)
 	{
-		try {
-			$hostname = '_openid.' . $identifier;
+		$hostname = '_openid.' . $hostname;
+		$records = dns_get_record($hostname, DNS_TXT);
 
-			$records = dns_get_record ($hostname, $type);
+		if (empty($records) || !is_array($records))
+		{
+			return false;
+		}
 
-			if (empty($records) || !is_array($records))
+		$issuer = false;
+
+		$rexep = '/iss=([^;]+)/';
+
+		foreach ($records as $record)
+		{
+			if (!isset($record['txt']))
 			{
-				return false;
+				continue;
 			}
 
-			$issuer = false;
-
-			$rexep = '/iss=([^;]+)/';
-
-			foreach ($records as $record)
+			if (preg_match($rexep, $record['txt'], $match))
 			{
-				if (!isset($record['txt']))
-				{
-					continue;
-				}
-
-				if (preg_match($rexep, $record['txt'], $match))
-				{
-					return $match[1];
-				}
+				return $match[1];
 			}
-		} catch (Exception $ex) {
-
 		}
 
 		return false;
+	}
+
+	/**
+	 * Returns the issuer information from the DNS TXT Record.
+	 * As per definition we try the complete path and check for an valid TXT record.
+	 *
+	 * @param  string  $identifier  The identifier/Domain of the user to authenticate
+	 *
+	 * @since 1.0.0
+	 */
+	protected function getIssuerFromIdentifier($identifier)
+	{
+
+		$result = $this->getIssuerFromHostname($identifier);
+
+		if (!is_bool($result))
+		{
+			return $result;
+		}
+
+		$hostparts = explode('.', $identifier);
+
 	}
 
 	protected static function getOpenId($issuer, $url)
