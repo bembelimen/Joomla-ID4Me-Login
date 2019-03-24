@@ -15,9 +15,6 @@ use Joomla\Registry\Registry;
 use Joomla\String\StringHelper;
 use Joomla\CMS\Plugin\CMSPlugin;
 use Joomla\CMS\Uri\Uri;
-use GuzzleHttp\Client as GuzzleClient;
-use Id4me\RP\Service;
-
 
 class PlgSystemId4me extends CMSPlugin
 {
@@ -28,11 +25,6 @@ class PlgSystemId4me extends CMSPlugin
 
 	public function onBeforeRender()
 	{
-		$this->httpClient = new GuzzleClient;
-		$this->id4Me = new Service;
-
-		$this->run();exit;
-
 		/*$issuer = $this->getIssuer('idtest1.domainid.community');
 
 		if (!$issuer)
@@ -49,6 +41,7 @@ class PlgSystemId4me extends CMSPlugin
 		echo print_r($server);exit;*/
 	}
 
+	/**
 	    public function run()
     {
         $identifier = 'idtemp2.id4me.family';
@@ -95,7 +88,7 @@ class PlgSystemId4me extends CMSPlugin
         var_dump($accessTokens);
         echo PHP_EOL;
         echo PHP_EOL;
-    }
+    }*/
 
 
     /**
