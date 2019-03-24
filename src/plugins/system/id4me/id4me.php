@@ -232,17 +232,6 @@ class PlgSystemId4me extends CMSPlugin
 		return false;
 	}
 
-	protected static function getOpenId($issuer, $url)
-	{
-		$server = new OAuth2\Server;
-
-		$config = $server->handleTokenRequest($issuer);
-
-		print_r($config);exit;
-
-		return $server;
-	}
-
 	protected function getOpenIdConfiguration($issuer)
 	{
 		// https://id.test.denic.de/.well-known/openid-configuration

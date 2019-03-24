@@ -1,6 +1,0 @@
-{
-    "require": {
-        "bshaffer/oauth2-server-php": "^1.11",
-		"id4me/id4me-rp": "dev-master"
-    }
-}
