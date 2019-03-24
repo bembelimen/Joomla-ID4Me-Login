@@ -20,10 +20,12 @@ use Joomla\CMS\Language\Text;
 use Joomla\CMS\Http\HttpFactory;
 use Joomla\CMS\Router\Route;
 use Joomla\CMS\Factory;
+use Joomla\CMS\Session\Session;
 
 class PlgSystemId4me extends CMSPlugin
 {
-	static $redirect_url = 'index.php?option=com_ajax&plugin=id4me';
+	static $redirect_url = '?option=com_ajax&plugin=ID4MeLoginVLogin&format=raw';
+	static $login_url = 'index.php?option=com_ajax&plugin=ID4MePrepare&format=raw';
 
 	protected $httpClient;
 	protected $id4Me;
@@ -34,14 +36,6 @@ class PlgSystemId4me extends CMSPlugin
 
 	public function onBeforeRender()
 	{
-		$issuer = $this->getIssuerbyIdentifier('idtest1.domainid.community');
-
-		// We can't do anythng when there is no issuer
-		if (!$issuer)
-		{
-			return false;
-		}
-
 		if ($this->app->isClient('site') || ($this->app->isClient('administrator') && Factory::getUser()->guest))
 		{
 			// Load JS
@@ -49,30 +43,7 @@ class PlgSystemId4me extends CMSPlugin
 
 			Text::script('PLG_SYSTEM_ID4ME_IDENTIFIER_LABEL');
 		}
-
-		if (!$issuer)
-		{
-			return false;
-		}
-
-		$issuerUrl = Uri::getInstance($issuer);
-		$issuerUrl->setScheme('https');
-
-		$issueConfiguration = $this->getOpenIdConfiguration($issuerUrl->toString());
-
-		$registrationEndpoint = (string) $issueConfiguration->get('registration_endpoint');
-		$registrationResult = $this->performRegistration($registrationEndpoint);
-
-		if (!$registrationResult)
-		{
-			return false;
-		}
-
-		//$server = $this->getOpenId($issuer, $uri->toString());
-
-		//echo print_r($server);exit;
 	}
-
 
 	protected function performRegistration($registrationEndpoint)
 	{
@@ -94,6 +65,34 @@ class PlgSystemId4me extends CMSPlugin
 		}
 
 		return new Registry($openIdConfiguration->body);
+	}
+
+	public static function onAjaxID4MePrepare()
+	{
+		$identifier = $this->app->input->getString('id4me-identifier');
+
+		// Validate identifier
+		$issuer = $this->getIssuerbyIdentifier($identifier);
+
+		// We can't do anythng when there is no issuer
+		if (!$issuer)
+		{
+			return false;
+		}
+
+		$issuerUrl = Uri::getInstance($issuer);
+		$issuerUrl->setScheme('https');
+
+		$issueConfiguration = $this->getOpenIdConfiguration($issuerUrl->toString());
+
+		$registrationEndpoint = (string) $issueConfiguration->get('registration_endpoint');
+		$registrationResult = $this->performRegistration($registrationEndpoint);
+
+		if (!$registrationResult)
+		{
+			return false;
+		}
+
 	}
 
 	protected function loadLayout($layout)
@@ -196,7 +195,7 @@ class PlgSystemId4me extends CMSPlugin
 
 		return false;
 	}
-	
+
 		/**
 	 * Returns the issuer information from the DNS TXT Record.
 	 * As per definition we try the complete path and check for an valid TXT record.
