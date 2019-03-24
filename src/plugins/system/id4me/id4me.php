@@ -55,6 +55,8 @@ class PlgSystemId4me extends CMSPlugin
 	{
 		$identifier = $this->app->input->getString('id4me-identifier');
 
+		$this->app->setUserState('id4me.identifier', $identifier);
+
 		// Validate identifier:
 		$issuer = $this->getIssuerbyIdentifier($identifier);
 
@@ -84,7 +86,47 @@ class PlgSystemId4me extends CMSPlugin
 	 */
 	public function onAjaxID4MeLogin()
 	{
-		// Do magic
+		$code = $this->app->input->get('code');
+		$state = $this->app->input->get('state');
+
+		$identifier = $this->app->getUserState('id4me.identifier');
+
+		// Validate identifier:
+		$issuer = $this->getIssuerbyIdentifier($identifier);
+
+		// We can't do anythng when there is no issuer
+		if (!$issuer)
+		{
+			return false;
+		}
+
+		$issuerUrl = Uri::getInstance($issuer);
+		$issuerUrl->setScheme('https');
+
+		$issuerConfiguration = $this->getOpenIdConfiguration($issuerUrl->toString());
+		$tokenEndpoint = (string) $issuerConfiguration->get('token_endpoint');
+
+		$this->getAuthTokens($code, $tokenEndpoint);
+
+	}
+
+
+	protected function getAuthTokens($code, $tokenEndpoint)
+	{
+		$authTokenRequest = http_build_query([
+			'grant_type' => 'authorization_code',
+			'code' => $code,
+			'redirect_uri' => $this->getValidateUrl(),
+		]);
+
+		$registrationResult = HttpFactory::getHttp()->post($tokenEndpoint, $authTokenRequest, ['Content-Type' => 'application/x-www-form-urlencoded']);
+
+		if (empty($registrationResult->body) || $registrationResult->code != '200')
+		{
+			return false;
+		}
+
+		return new Registry($registrationResult->body);
 	}
 
 	/**
@@ -159,7 +201,7 @@ class PlgSystemId4me extends CMSPlugin
 	 *
 	 * @param type $type
 	 *
-	 * @return type
+	 * @return string  The validateion URL
 	 */
 	protected function getValidateUrl($type)
 	{
