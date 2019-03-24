@@ -11,10 +11,12 @@ defined('_JEXEC') or die;
 
 require_once __DIR__ . '/library/vendor/autoload.php';
 
+use Joomla\CMS\Plugin\CMSPlugin;
+use Joomla\CMS\Plugin\PluginHelper;
+use Joomla\CMS\Uri\Uri;
 use Joomla\Registry\Registry;
 use Joomla\String\StringHelper;
-use Joomla\CMS\Plugin\CMSPlugin;
-use Joomla\CMS\Uri\Uri;
+use Joomla\CMS\Language\Text;
 
 class PlgSystemId4me extends CMSPlugin
 {
@@ -23,9 +25,21 @@ class PlgSystemId4me extends CMSPlugin
 	protected $httpClient;
 	protected $id4Me;
 
+	protected $app;
+
+	protected $autoloadLanguage = true;
+
 	public function onBeforeRender()
 	{
 		$issuer = $this->getIssuerbyIdentifier('idtest1.domainid.community');
+
+		if ($this->app->isClient('site') || ($this->app->isClient('administrator') && Factory::getUser()->guest))
+		{
+			// Load JS
+			echo $this->loadLayout('login');
+
+			Text::script('PLG_SYSTEM_ID4ME_LOGIN_BUTTON');
+		}
 
 		if (!$issuer)
 		{
@@ -41,65 +55,69 @@ class PlgSystemId4me extends CMSPlugin
 		echo print_r($server);exit;
 	}
 
-	/*
-	    public function run()
-    {
-        $identifier = 'idtemp2.id4me.family';
-        echo PHP_EOL;
-        echo '***********************************Discovery***************************************';
-        echo PHP_EOL;
-        $authorityName = $this->id4Me->discover($identifier);
-        var_dump($authorityName);
-        echo PHP_EOL;
-        echo PHP_EOL;
-        echo '***********************************Registration***************************************';
-        echo PHP_EOL;
-        $openIdConfig = $this->id4Me->getOpenIdConfig($authorityName);
-        var_dump($openIdConfig);
-        echo PHP_EOL;
-        $client = $this->id4Me->register(
-            $openIdConfig,
-            $identifier,
-            sprintf('http://www.rezepte-elster.de/id4me.php', $identifier)
-        );
-        var_dump($client);
-        echo PHP_EOL;
-        echo PHP_EOL;
-        echo '***********************************Authenticate***************************************';
-        echo PHP_EOL;
-        echo "Do following steps:\n";
-        echo "1.Please click on login link below\n";
-        echo "2.Login with password '123456'\n";
-        echo "3.Copy and Paste 'code' value from corresponding url query parameter into code input prompt field below'\n";
-        $authorizationUrl = $this->id4Me->getAuthorizationUrl(
-            $openIdConfig, $client->getClientId(), $identifier, $client->getActiveRedirectUri(), 'idtemp2.id4me.family'
-        );
-        var_dump($authorizationUrl);exit;
-        echo PHP_EOL;
-        echo PHP_EOL;
-        $accessTokens = $this->id4Me->getAccessTokens(
-            $openIdConfig,
-            readline('code:'),
-            sprintf('http://www.rezepte-elster.de/id4me.php', $identifier),
-            $client->getClientId(),
-            $client->getClientSecret()
-        );
+	protected function loadLayout($layout)
+	{
+		$path = PluginHelper::getLayoutPath('system', 'id4me', $layout);
 
-        var_dump($accessTokens);
-        echo PHP_EOL;
-        echo PHP_EOL;
-    }*/
+		ob_start();
+		include $path;
 
+		$result = ob_get_contents();
 
-    /**
-     * Set current http client to another value
-     *
-     * @param Client $httpClient
-     */
-    public function setHttpClient(Client $httpClient)
-    {
-        $this->httpClient = $httpClient;
-    }
+		ob_clean();
+
+		return $result;
+	}
+
+/*
+		public function run()
+	{
+		$identifier = 'idtemp2.id4me.family';
+		echo PHP_EOL;
+		echo '***********************************Discovery***************************************';
+		echo PHP_EOL;
+		$authorityName = $this->id4Me->discover($identifier);
+		var_dump($authorityName);
+		echo PHP_EOL;
+		echo PHP_EOL;
+		echo '***********************************Registration***************************************';
+		echo PHP_EOL;
+		$openIdConfig = $this->id4Me->getOpenIdConfig($authorityName);
+		var_dump($openIdConfig);
+		echo PHP_EOL;
+		$client = $this->id4Me->register(
+			$openIdConfig,
+			$identifier,
+			sprintf('http://www.rezepte-elster.de/id4me.php', $identifier)
+		);
+		var_dump($client);
+		echo PHP_EOL;
+		echo PHP_EOL;
+		echo '***********************************Authenticate***************************************';
+		echo PHP_EOL;
+		echo "Do following steps:\n";
+		echo "1.Please click on login link below\n";
+		echo "2.Login with password '123456'\n";
+		echo "3.Copy and Paste 'code' value from corresponding url query parameter into code input prompt field below'\n";
+		$authorizationUrl = $this->id4Me->getAuthorizationUrl(
+			$openIdConfig, $client->getClientId(), $identifier, $client->getActiveRedirectUri(), 'idtemp2.id4me.family'
+		);
+		var_dump($authorizationUrl);exit;
+		echo PHP_EOL;
+		echo PHP_EOL;
+		$accessTokens = $this->id4Me->getAccessTokens(
+			$openIdConfig,
+			readline('code:'),
+			sprintf('http://www.rezepte-elster.de/id4me.php', $identifier),
+			$client->getClientId(),
+			$client->getClientSecret()
+		);
+
+		var_dump($accessTokens);
+		echo PHP_EOL;
+		echo PHP_EOL;
+	}
+*/
 
 	/**
 	 * Try to read the issuer information from the DNS TXT Record.
