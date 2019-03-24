@@ -47,6 +47,30 @@ class PlgSystemId4me extends CMSPlugin
 
 	protected function getRedirectUrl($registrationEndpoint, $type = 'web')
 	{
+		$registrationResult = $this->registerService($registrationEndpoint, $type);
+
+		$claims = $this->getUserInfoClaims();
+		
+		
+	}
+
+
+	protected function getUserInfoClaims()
+	{
+		return [
+			'userinfo' => [
+				"given_name" => ["essential" => true, "reason" => "In order to create an account"],
+				"email" => ["essential" => true, "reason" => "To assure smooth communication"],
+				"email_verified" => ["reason" => "To skip the E-mail verification"],
+			],
+			'id_token' => [
+				"auth_time" => ["essential" => true],
+			]
+		];
+	}
+
+	protected function registerService($registrationEndpoint, $type = 'web')
+	{
 		$redirectUrl = Uri::getInstance();
 		$redirectUrl->setQuery(self::$redirect_url);
 
