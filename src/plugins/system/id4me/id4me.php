@@ -104,7 +104,7 @@ https://auth.freedom-id.de/login
 		$redirectUrl->setQuery(self::$validateUrl);
 		$redirectUrl->setScheme($type === 'web' ? 'https' : 'http');
 
-		return $redirectUrl->toString();
+		return urlencode($redirectUrl->toString());
 	}
 
 	protected function registerService($registrationEndpoint, $type = 'web')
