@@ -11,10 +11,12 @@ defined('_JEXEC') or die;
 
 require_once __DIR__ . '/library/vendor/autoload.php';
 
+use Joomla\CMS\Plugin\CMSPlugin;
+use Joomla\CMS\Plugin\PluginHelper;
+use Joomla\CMS\Uri\Uri;
 use Joomla\Registry\Registry;
 use Joomla\String\StringHelper;
-use Joomla\CMS\Plugin\CMSPlugin;
-use Joomla\CMS\Uri\Uri;
+use Joomla\CMS\Language\Text;
 
 class PlgSystemId4me extends CMSPlugin
 {
@@ -22,6 +24,10 @@ class PlgSystemId4me extends CMSPlugin
 
 	protected $httpClient;
 	protected $id4Me;
+
+	protected $app;
+
+	protected $autoloadLanguage = true;
 
 	public function onBeforeRender()
 	{
@@ -47,6 +53,20 @@ class PlgSystemId4me extends CMSPlugin
 		$server = $this->getOpenId($issuer, $uri->toString());
 
 		echo print_r($server);exit;*/
+	}
+
+	protected function loadLayout($layout)
+	{
+		$path = PluginHelper::getLayoutPath('system', 'id4me', $layout);
+
+		ob_start();
+		include $path;
+
+		$result = ob_get_contents();
+
+		ob_clean();
+
+		return $result;
 	}
 
 	    public function run()
