@@ -17,6 +17,7 @@ use Joomla\CMS\Uri\Uri;
 use Joomla\Registry\Registry;
 use Joomla\String\StringHelper;
 use Joomla\CMS\Language\Text;
+use Joomla\CMS\Factory;
 
 class PlgSystemId4me extends CMSPlugin
 {
