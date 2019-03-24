@@ -25,7 +25,7 @@ class PlgSystemId4me extends CMSPlugin
 
 	public function onBeforeRender()
 	{
-		/*$issuer = $this->getIssuer('idtest1.domainid.community');
+		$issuer = $this->getIssuer('idtest1.domainid.community');
 
 		if (!$issuer)
 		{
@@ -38,10 +38,10 @@ class PlgSystemId4me extends CMSPlugin
 
 		$server = $this->getOpenId($issuer, $uri->toString());
 
-		echo print_r($server);exit;*/
+		echo print_r($server);exit;
 	}
 
-	/**
+	/*
 	    public function run()
     {
         $identifier = 'idtemp2.id4me.family';
