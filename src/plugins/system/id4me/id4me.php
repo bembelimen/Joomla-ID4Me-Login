@@ -25,6 +25,14 @@ class PlgSystemId4me extends CMSPlugin
 
 	public function onBeforeRender()
 	{
+		if ($this->app->isClient('site') || ($this->app->isClient('administrator') && Factory::getUser()->guest))
+		{
+			// Load JS
+			echo $this->loadLayout('login');
+
+			Text::script('PLG_SYSTEM_ID4ME_LOGIN_BUTTON');
+		}
+
 		/*$issuer = $this->getIssuer('idtest1.domainid.community');
 
 		if (!$issuer)
@@ -41,7 +49,6 @@ class PlgSystemId4me extends CMSPlugin
 		echo print_r($server);exit;*/
 	}
 
-	/**
 	    public function run()
     {
         $identifier = 'idtemp2.id4me.family';
@@ -88,7 +95,7 @@ class PlgSystemId4me extends CMSPlugin
         var_dump($accessTokens);
         echo PHP_EOL;
         echo PHP_EOL;
-    }*/
+    }
 
 
     /**
