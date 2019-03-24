@@ -180,7 +180,7 @@ class PlgSystemId4me extends CMSPlugin
 	protected function registerService($registrationEndpoint, $type = 'web')
 	{
 		$registrationDataJSON = json_encode(array(
-			'client_name' => 'Acme Service',
+			'client_name' => $this->app->get('sitename'),
 			'application_type' => $type,
 			'redirect_uris' => [$this->getValidateUrl($type)],
 		));
