@@ -64,7 +64,7 @@ class PlgSystemId4me extends CMSPlugin
 		$authorizationUrl->setVar('scope', 'openid');
 		$authorizationUrl->setVar('response_type', 'code');
 		$authorizationUrl->setVar('client_id', $registrationResult->get('client_id'));
-		$authorizationUrl->setVar('redirect_uri', $this->getValidateUrl($type));
+		$authorizationUrl->setVar('redirect_uri', urlencode($this->getValidateUrl($type)));
 		$authorizationUrl->setVar('login_hint', $identifier);
 		$authorizationUrl->setVar('state', UserHelper::genRandomPassword(100));
 		$authorizationUrl->setScheme($type === 'web' ? 'https' : 'http');
@@ -104,7 +104,7 @@ https://auth.freedom-id.de/login
 		$redirectUrl->setQuery(self::$validateUrl);
 		$redirectUrl->setScheme($type === 'web' ? 'https' : 'http');
 
-		return urlencode($redirectUrl->toString());
+		return $redirectUrl->toString();
 	}
 
 	protected function registerService($registrationEndpoint, $type = 'web')
