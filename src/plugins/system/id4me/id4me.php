@@ -106,7 +106,7 @@ class PlgSystemId4me extends CMSPlugin
 	 *
 	 * @param  string  $hostname  The identifier/Domain of the user to authenticate
 	 *
-	 * @since 1.0.0
+	 * @since  1.0.0
 	 */
 	private function getIssuerbyHostname($hostname)
 	{
@@ -137,27 +137,39 @@ class PlgSystemId4me extends CMSPlugin
 
 		return false;
 	}
-
-	/**
+	
+		/**
 	 * Returns the issuer information from the DNS TXT Record.
 	 * As per definition we try the complete path and check for an valid TXT record.
 	 *
 	 * @param  string  $identifier  The identifier/Domain of the user to authenticate
 	 *
-	 * @since 1.0.0
+	 * @since  1.0.0
 	 */
 	protected function getIssuerbyIdentifier($identifier)
 	{
-
-		$result = $this->getIssuerbyHostname($identifier);
-
-		if (!is_bool($result))
-		{
-			return $result;
-		}
-
 		$hostparts = explode('.', $identifier);
+		$totalCountOfHostparts = count($hostparts);
 
+		$i = 0;
+		$result = false;
+
+		do
+		{
+			$reducedIdentifier = implode('.', $hostparts);
+			$result = $this->getIssuerbyHostname($reducedIdentifier);
+
+			if (!is_bool($result))
+			{
+				return $result;
+			}
+
+			array_shift($hostparts);
+			++$i;
+		}
+		while ($i <= $totalCountOfHostparts);
+
+		return false;
 	}
 
 	protected static function getOpenId($issuer, $url)
