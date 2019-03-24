@@ -64,14 +64,14 @@ class PlgSystemId4me extends CMSPlugin
 			return false;
 		}
 
-		return new Registry($openIdConfiguration->body);
+		return new Registry($registrationResult->body);
 	}
 
 	public static function onAjaxID4MePrepare()
 	{
 		$identifier = $this->app->input->getString('id4me-identifier');
 
-		// Validate identifier
+		// Validate identifier: 
 		$issuer = $this->getIssuerbyIdentifier($identifier);
 
 		// We can't do anythng when there is no issuer
