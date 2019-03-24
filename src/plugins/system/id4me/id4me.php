@@ -18,10 +18,12 @@ use Joomla\Registry\Registry;
 use Joomla\String\StringHelper;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Factory;
+use Joomla\CMS\Session\Session;
 
 class PlgSystemId4me extends CMSPlugin
 {
-	static $redirect_url = 'index.php?option=com_ajax&plugin=id4me';
+	static $redirect_url = 'index.php?option=com_ajax&plugin=ID4MeLoginVLogin&format=raw';
+	static $login_url = 'index.php?option=com_ajax&plugin=ID4MePrepare&format=raw';
 
 	protected $httpClient;
 	protected $id4Me;
@@ -32,8 +34,6 @@ class PlgSystemId4me extends CMSPlugin
 
 	public function onBeforeRender()
 	{
-		$issuer = $this->getIssuerbyIdentifier('idtest1.domainid.community');
-
 		if ($this->app->isClient('site') || ($this->app->isClient('administrator') && Factory::getUser()->guest))
 		{
 			// Load JS
@@ -41,19 +41,15 @@ class PlgSystemId4me extends CMSPlugin
 
 			Text::script('PLG_SYSTEM_ID4ME_IDENTIFIER_LABEL');
 		}
+	}
 
-		if (!$issuer)
-		{
-			return false;
-		}
+	public static function onAjaxID4MePrepare()
+	{
+		$identifier = $this->app->input->get('id4me-identifier');
 
-		$uri = Uri::getInstance($issuer);
+		echo $identifier;
 
-		$uri->setScheme('https');
-
-		$server = $this->getOpenId($issuer, $uri->toString());
-
-		echo print_r($server);exit;
+		// Validate identifier
 	}
 
 	protected function loadLayout($layout)
@@ -156,7 +152,7 @@ class PlgSystemId4me extends CMSPlugin
 
 		return false;
 	}
-	
+
 		/**
 	 * Returns the issuer information from the DNS TXT Record.
 	 * As per definition we try the complete path and check for an valid TXT record.

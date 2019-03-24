@@ -11,6 +11,7 @@ defined('_JEXEC') or die;
 
 use Joomla\CMS\HTML\HTMLHelper;
 use Joomla\CMS\Factory;
+use Joomla\CMS\Router\Route;
 
 HTMLHelper::_('stylesheet', 'plg_system_id4me/id4me.css', ['relative' => true]);
 HTMLHelper::_('script', 'plg_system_id4me/id4me.min.js', ['relative' => true]);
@@ -23,7 +24,11 @@ $js = "
 		if (Joomla.ID4Me)
 		{
 			Joomla.ID4Me('.login > form, form#login-form', {
-				buttonimage: " . json_encode(HTMLHelper::_('image', 'plg_system_id4me/id4me-login-button.svg', '', null, true, 1)) . "
+				buttonimage: " . json_encode(HTMLHelper::_('image', 'plg_system_id4me/id4me-start-login.svg', '', null, true, 1)) . ",
+				loginimage: " . json_encode(HTMLHelper::_('image', 'plg_system_id4me/id4me-login-button.svg', '', null, true, 1)) . ",
+				token: '" . HTMLHelper::_('form.token') . "',
+				formAction: '" . str_replace('/administrator/', '/', Route::_(self::$login_url)) . "',
+				context: '" . (Factory::getApplication()->isClient('administrator') ? 'admin' : 'site') . "'
 			});
 		}
 	  });
