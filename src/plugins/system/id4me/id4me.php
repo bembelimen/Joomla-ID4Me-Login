@@ -17,6 +17,8 @@ use Joomla\CMS\Uri\Uri;
 use Joomla\Registry\Registry;
 use Joomla\String\StringHelper;
 use Joomla\CMS\Language\Text;
+use Joomla\CMS\Http\HttpFactory;
+use Joomla\CMS\Router\Route;
 
 class PlgSystemId4me extends CMSPlugin
 {
@@ -52,14 +54,45 @@ class PlgSystemId4me extends CMSPlugin
 			return false;
 		}
 
-		$uri = Uri::getInstance($issuer);
-		$uri->setScheme('https');
+		$issuerUrl = Uri::getInstance($issuer);
+		$issuerUrl->setScheme('https');
 
-		$issueConfiguration = $this->getOpenIdConfiguration($uri->toString());
+		$issueConfiguration = $this->getOpenIdConfiguration($issuerUrl->toString());
 
-		$server = $this->getOpenId($issuer, $uri->toString());
+		$registrationEndpoint = (string) $issueConfiguration->get('registration_endpoint');
+		$registrationResult = $this->performRegistration($registrationEndpoint);
 
-		echo print_r($server);exit;
+		if (!$registrationResult)
+		{
+			return false;
+		}
+
+		//$server = $this->getOpenId($issuer, $uri->toString());
+
+		//echo print_r($server);exit;
+	}
+
+
+	protected function performRegistration($registrationEndpoint)
+	{
+		$redirectUrl = Uri::getInstance();
+		$redirectUrl->setQuery(self::$redirect_url);
+		$redirectUrl->setScheme('https');
+
+		$registrationDataJSON = json_encode(array(
+			'client_name' => 'Acme Service',
+			'application_type' => 'web',
+			'redirect_uris' => [$redirectUrl->toString()],
+		));
+
+		$registrationResult = HttpFactory::getHttp()->post($registrationEndpoint, $registrationDataJSON, ['Content-Type' => 'application/json']);
+
+		if (empty($registrationResult->body) || $registrationResult->code != '200')
+		{
+			return false;
+		}
+
+		return new Registry($openIdConfiguration->body);
 	}
 
 	protected function loadLayout($layout)
@@ -211,7 +244,16 @@ class PlgSystemId4me extends CMSPlugin
 	protected function getOpenIdConfiguration($issuer)
 	{
 		// https://id.test.denic.de/.well-known/openid-configuration
-		$json = json_encode(JHttpFactory::getHttp()->get('https://' . $issuer . '/.well-known/openid-configuration')->body);
+		$openIdConfiguration = HttpFactory::getHttp()->get(
+			$issuer . '/.well-known/openid-configuration'
+		);
+
+		if (empty($openIdConfiguration->body) || $openIdConfiguration->code != '200')
+		{
+			return false;
+		}
+
+		return new Registry($openIdConfiguration->body);
 	}
 
 }
