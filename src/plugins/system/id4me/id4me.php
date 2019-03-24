@@ -68,18 +68,8 @@ class PlgSystemId4me extends CMSPlugin
 		$authorizationUrl->setVar('login_hint', $identifier);
 		$authorizationUrl->setVar('state', UserHelper::genRandomPassword(100));
 		$authorizationUrl->setScheme($type === 'web' ? 'https' : 'http');
+
 		return $authorizationUrl->toString();
-
-		/*
-https://auth.freedom-id.de/login
-?claims=%7B%0A%20%20%20%22userinfo%22%3A%0A%20%20%20%20%7B%0A%20%20%20%20%20%22given_name%22%3A%20%7B%22essential%22%3A%20true%2C%20%22reason%22%3A%20%22In%20order%20to%20create%20an%20account%22%7D%2C%0A%20%20%20%20%20%22nickname%22%3A%20null%2C%0A%20%20%20%20%20%22email%22%3A%20%7B%22essential%22%3A%20true%2C%20%22reason%22%3A%20%22To%20assure%20smooth%20coomunication%22%7D%2C%0A%20%20%20%20%20%22email_verified%22%3A%20%7B%22reason%22%3A%20%22To%20skip%20the%20E-mail%20verification%22%7D%2C%0A%20%20%20%20%20%22picture%22%3A%20null%0A%20%20%20%20%7D%2C%0A%20%20%20%22id_token%22%3A%0A%20%20%20%20%7B%0A%20%20%20%20%20%22auth_time%22%3A%20%7B%22essential%22%3A%20true%7D%0A%20%20%20%20%7D%0A%20%20%7D
-&scope=openid
-&response_type=code
-&client_id=x6q5wsgdryojq
-&redirect_uri=https%3A%2F%2Facmeservice.com%2Fvalidate
-&login_hint=john.doe.domainid.community
-&state=random_45t211*/
-
 	}
 
 
