@@ -21,11 +21,12 @@ use Joomla\CMS\Http\HttpFactory;
 use Joomla\CMS\Router\Route;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Session\Session;
+use Joomla\CMS\User\UserHelper;
 
 class PlgSystemId4me extends CMSPlugin
 {
-	static $redirect_url = 'option=com_ajax&plugin=ID4MeLogin&format=raw';
-	static $login_url = 'index.php?option=com_ajax&plugin=ID4MePrepare&format=raw';
+	static $validateUrl = 'option=com_ajax&plugin=ID4MeLogin&format=raw';
+	static $loginUrl = 'index.php?option=com_ajax&plugin=ID4MePrepare&format=raw';
 
 	protected $httpClient;
 	protected $id4Me;
@@ -45,19 +46,46 @@ class PlgSystemId4me extends CMSPlugin
 		}
 	}
 
-	protected function getRedirectUrl($registrationEndpoint, $type = 'web')
+	protected function getAuthorizationUrl($issuerConfiguration, $identifier)
 	{
+
+		$type = 'native';
+
+		$registrationEndpoint = (string) $issuerConfiguration->get('registration_endpoint');
 		$registrationResult = $this->registerService($registrationEndpoint, $type);
 
-		$claims = $this->getUserInfoClaims();
+		$claimsSupported = $issuerConfiguration->get('claims_supported');
+		$claims = $this->getUserInfoClaims($claimsSupported);
+
+		$authorizationEndpoint = $issuerConfiguration->get('authorization_endpoint');
 		
-		
+		$authorizationUrl = Uri::getInstance($authorizationEndpoint);
+		$authorizationUrl->setVar('claims', urlencode($claims));
+		$authorizationUrl->setVar('scope', 'openid');
+		$authorizationUrl->setVar('response_type', 'code');
+		$authorizationUrl->setVar('client_id', $registrationResult->get('client_id'));
+		$authorizationUrl->setVar('redirect_uri', $this->getValidateUrl($type));
+		$authorizationUrl->setVar('login_hint', $identifier);
+		$authorizationUrl->setVar('state', UserHelper::genRandomPassword(100));
+		$authorizationUrl->setScheme($type === 'web' ? 'https' : 'http');
+		return $authorizationUrl->toString();
+
+		/*
+https://auth.freedom-id.de/login
+?claims=%7B%0A%20%20%20%22userinfo%22%3A%0A%20%20%20%20%7B%0A%20%20%20%20%20%22given_name%22%3A%20%7B%22essential%22%3A%20true%2C%20%22reason%22%3A%20%22In%20order%20to%20create%20an%20account%22%7D%2C%0A%20%20%20%20%20%22nickname%22%3A%20null%2C%0A%20%20%20%20%20%22email%22%3A%20%7B%22essential%22%3A%20true%2C%20%22reason%22%3A%20%22To%20assure%20smooth%20coomunication%22%7D%2C%0A%20%20%20%20%20%22email_verified%22%3A%20%7B%22reason%22%3A%20%22To%20skip%20the%20E-mail%20verification%22%7D%2C%0A%20%20%20%20%20%22picture%22%3A%20null%0A%20%20%20%20%7D%2C%0A%20%20%20%22id_token%22%3A%0A%20%20%20%20%7B%0A%20%20%20%20%20%22auth_time%22%3A%20%7B%22essential%22%3A%20true%7D%0A%20%20%20%20%7D%0A%20%20%7D
+&scope=openid
+&response_type=code
+&client_id=x6q5wsgdryojq
+&redirect_uri=https%3A%2F%2Facmeservice.com%2Fvalidate
+&login_hint=john.doe.domainid.community
+&state=random_45t211*/
+
 	}
 
 
-	protected function getUserInfoClaims()
+	protected function getUserInfoClaims($claimsSupported)
 	{
-		return [
+		return json_encode([
 			'userinfo' => [
 				"given_name" => ["essential" => true, "reason" => "In order to create an account"],
 				"email" => ["essential" => true, "reason" => "To assure smooth communication"],
@@ -66,20 +94,25 @@ class PlgSystemId4me extends CMSPlugin
 			'id_token' => [
 				"auth_time" => ["essential" => true],
 			]
-		];
+		]);
+	}
+
+
+	protected function getValidateUrl($type)
+	{
+		$redirectUrl = Uri::getInstance();
+		$redirectUrl->setQuery(self::$validateUrl);
+		$redirectUrl->setScheme($type === 'web' ? 'https' : 'http');
+
+		return $redirectUrl->toString();
 	}
 
 	protected function registerService($registrationEndpoint, $type = 'web')
 	{
-		$redirectUrl = Uri::getInstance();
-		$redirectUrl->setQuery(self::$redirect_url);
-
-		$redirectUrl->setScheme($type === 'web' ? 'https' : 'http');
-
 		$registrationDataJSON = json_encode(array(
 			'client_name' => 'Acme Service',
 			'application_type' => $type,
-			'redirect_uris' => [$redirectUrl->toString()],
+			'redirect_uris' => [$this->getValidateUrl($type)],
 		));
 
 		$registrationResult = HttpFactory::getHttp()->post($registrationEndpoint, $registrationDataJSON, ['Content-Type' => 'application/json']);
@@ -108,17 +141,16 @@ class PlgSystemId4me extends CMSPlugin
 		$issuerUrl = Uri::getInstance($issuer);
 		$issuerUrl->setScheme('https');
 
-		$issueConfiguration = $this->getOpenIdConfiguration($issuerUrl->toString());
+		$issuerConfiguration = $this->getOpenIdConfiguration($issuerUrl->toString());
 
-		$registrationEndpoint = (string) $issueConfiguration->get('registration_endpoint');
-		$redirectUrl = $this->getRedirectUrl($registrationEndpoint, 'native');
+		$authorizationUrl = $this->getAuthorizationUrl($issuerConfiguration, $identifier);
 
-		if (!$redirectUrl)
+		if (!$authorizationUrl)
 		{
 			return false;
 		}
 
-		$this->app->redirect($redirectUrl);
+		$this->app->redirect($authorizationUrl);
 	}
 
 	protected function loadLayout($layout)
