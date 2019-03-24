@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension version="3.1" type="plugin" group="system" method="upgrade">
+	<name>plg_system_id4me</name>
+	<author>Benjamin Trenkle</author>
+	<creationDate>March 2019</creationDate>
+	<copyright>Copyright (C) 2019 Benjamin Trenkle. All rights reserved.</copyright>
+	<license>GNU General Public License version 2 or later; see LICENSE.txt</license>
+	<authorEmail></authorEmail>
+	<authorUrl>www.wicked-software.de</authorUrl>
+	<version>1.0.0</version>
+	<description>PLG_SYSTEM_ID4ME_XML_DESCRIPTION</description>
+	<files>
+		<folder>form</folder>
+		<filename plugin="id4me">id4me.php</filename>
+	</files>
+	<languages>
+		<language tag="en-GB">en-GB.plg_system_id4me.ini</language>
+		<language tag="en-GB">en-GB.plg_system_id4me.sys.ini</language>
+	</languages>
+	<config>
+		<fields name="params">
+			<fieldset name="basic">
+				<field
+					name="allow_registration"
+					type="list"
+					label="PLG_SYSTEM_ID4ME_FIELD_ALLOW_REGISTRATION_LABEL"
+					description="PLG_SYSTEM_ID4ME_FIELD_ALLOW_REGISTRATION_DESC"
+					default=""
+					filter="integer"
+					class="btn-group btn-group-yesno"
+					>
+					<option value="">JGLOBAL_USE_GLOBAL</option>
+					<option value="1">JYES</option>
+					<option value="0">JNO</option>
+				</field>
+			</fieldset>
+		</fields>
+	</config>
+</extension>
