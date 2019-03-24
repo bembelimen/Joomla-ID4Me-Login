@@ -46,80 +46,16 @@ class PlgSystemId4me extends CMSPlugin
 		}
 	}
 
-	protected function getAuthorizationUrl($issuerConfiguration, $identifier)
-	{
-
-		$type = 'native';
-
-		$registrationEndpoint = (string) $issuerConfiguration->get('registration_endpoint');
-		$registrationResult = $this->registerService($registrationEndpoint, $type);
-
-		$claimsSupported = $issuerConfiguration->get('claims_supported');
-		$claims = $this->getUserInfoClaims($claimsSupported);
-
-		$authorizationEndpoint = $issuerConfiguration->get('authorization_endpoint');
-		
-		$authorizationUrl = Uri::getInstance($authorizationEndpoint);
-		$authorizationUrl->setVar('claims', urlencode($claims));
-		$authorizationUrl->setVar('scope', 'openid');
-		$authorizationUrl->setVar('response_type', 'code');
-		$authorizationUrl->setVar('client_id', $registrationResult->get('client_id'));
-		$authorizationUrl->setVar('redirect_uri', urlencode($this->getValidateUrl($type)));
-		$authorizationUrl->setVar('login_hint', $identifier);
-		$authorizationUrl->setVar('state', UserHelper::genRandomPassword(100));
-		$authorizationUrl->setScheme($type === 'web' ? 'https' : 'http');
-
-		return $authorizationUrl->toString();
-	}
-
-
-	protected function getUserInfoClaims($claimsSupported)
-	{
-		return json_encode([
-			'userinfo' => [
-				"given_name" => ["essential" => true, "reason" => "In order to create an account"],
-				"email" => ["essential" => true, "reason" => "To assure smooth communication"],
-				"email_verified" => ["reason" => "To skip the E-mail verification"],
-			],
-			'id_token' => [
-				"auth_time" => ["essential" => true],
-			]
-		]);
-	}
-
-
-	protected function getValidateUrl($type)
-	{
-		$redirectUrl = Uri::getInstance();
-		$redirectUrl->setQuery(self::$validateUrl);
-		$redirectUrl->setScheme($type === 'web' ? 'https' : 'http');
-
-		return $redirectUrl->toString();
-	}
-
-	protected function registerService($registrationEndpoint, $type = 'web')
-	{
-		$registrationDataJSON = json_encode(array(
-			'client_name' => 'Acme Service',
-			'application_type' => $type,
-			'redirect_uris' => [$this->getValidateUrl($type)],
-		));
-
-		$registrationResult = HttpFactory::getHttp()->post($registrationEndpoint, $registrationDataJSON, ['Content-Type' => 'application/json']);
-
-		if (empty($registrationResult->body) || $registrationResult->code != '200')
-		{
-			return false;
-		}
-
-		return new Registry($registrationResult->body);
-	}
-
+	/**
+	 * Uses login credentials and redirect to the login field from the provider
+	 *
+	 * @return boolean
+	 */
 	public function onAjaxID4MePrepare()
 	{
 		$identifier = $this->app->input->getString('id4me-identifier');
 
-		// Validate identifier: 
+		// Validate identifier:
 		$issuer = $this->getIssuerbyIdentifier($identifier);
 
 		// We can't do anythng when there is no issuer
@@ -143,6 +79,21 @@ class PlgSystemId4me extends CMSPlugin
 		$this->app->redirect($authorizationUrl);
 	}
 
+	/**
+	 * Endpoint for the final login/registration process
+	 */
+	public function onAjaxID4MeLogin()
+	{
+		// Do magic
+	}
+
+	/**
+	 * Loads an overrideable tmpl file
+	 *
+	 * @param string $layout The layout name
+	 *
+	 * @return string  The final template content
+	 */
 	protected function loadLayout($layout)
 	{
 		$path = PluginHelper::getLayoutPath('system', 'id4me', $layout);
@@ -157,55 +108,92 @@ class PlgSystemId4me extends CMSPlugin
 		return $result;
 	}
 
-/*
-		public function run()
+	protected function getAuthorizationUrl($issuerConfiguration, $identifier)
 	{
-		$identifier = 'idtemp2.id4me.family';
-		echo PHP_EOL;
-		echo '***********************************Discovery***************************************';
-		echo PHP_EOL;
-		$authorityName = $this->id4Me->discover($identifier);
-		var_dump($authorityName);
-		echo PHP_EOL;
-		echo PHP_EOL;
-		echo '***********************************Registration***************************************';
-		echo PHP_EOL;
-		$openIdConfig = $this->id4Me->getOpenIdConfig($authorityName);
-		var_dump($openIdConfig);
-		echo PHP_EOL;
-		$client = $this->id4Me->register(
-			$openIdConfig,
-			$identifier,
-			sprintf('http://www.rezepte-elster.de/id4me.php', $identifier)
-		);
-		var_dump($client);
-		echo PHP_EOL;
-		echo PHP_EOL;
-		echo '***********************************Authenticate***************************************';
-		echo PHP_EOL;
-		echo "Do following steps:\n";
-		echo "1.Please click on login link below\n";
-		echo "2.Login with password '123456'\n";
-		echo "3.Copy and Paste 'code' value from corresponding url query parameter into code input prompt field below'\n";
-		$authorizationUrl = $this->id4Me->getAuthorizationUrl(
-			$openIdConfig, $client->getClientId(), $identifier, $client->getActiveRedirectUri(), 'idtemp2.id4me.family'
-		);
-		var_dump($authorizationUrl);exit;
-		echo PHP_EOL;
-		echo PHP_EOL;
-		$accessTokens = $this->id4Me->getAccessTokens(
-			$openIdConfig,
-			readline('code:'),
-			sprintf('http://www.rezepte-elster.de/id4me.php', $identifier),
-			$client->getClientId(),
-			$client->getClientSecret()
-		);
+		$type = 'native';
 
-		var_dump($accessTokens);
-		echo PHP_EOL;
-		echo PHP_EOL;
+		$registrationEndpoint = (string) $issuerConfiguration->get('registration_endpoint');
+		$registrationResult = $this->registerService($registrationEndpoint, $type);
+
+		$claimsSupported = $issuerConfiguration->get('claims_supported');
+		$claims = $this->getUserInfoClaims($claimsSupported);
+
+		$authorizationEndpoint = $issuerConfiguration->get('authorization_endpoint');
+
+		$authorizationUrl = Uri::getInstance($authorizationEndpoint);
+		$authorizationUrl->setVar('claims', urlencode($claims));
+		$authorizationUrl->setVar('scope', 'openid');
+		$authorizationUrl->setVar('response_type', 'code');
+		$authorizationUrl->setVar('client_id', $registrationResult->get('client_id'));
+		$authorizationUrl->setVar('redirect_uri', urlencode($this->getValidateUrl($type)));
+		$authorizationUrl->setVar('login_hint', $identifier);
+		$authorizationUrl->setVar('state', UserHelper::genRandomPassword(100));
+		$authorizationUrl->setScheme($type === 'web' ? 'https' : 'http');
+
+		return $authorizationUrl->toString();
 	}
-*/
+
+	/**
+	 *
+	 *
+	 * @param boolean $claimsSupported
+	 *
+	 * @return void
+	 */
+	protected function getUserInfoClaims($claimsSupported)
+	{
+		return json_encode([
+			'userinfo' => [
+				'given_name' => ['essential' => true, 'reason' => 'In order to create an account'],
+				'email' => ['essential' => true, 'reason' => 'To assure smooth communication'],
+				'email_verified' => ['reason' => 'To skip the E-mail verification'],
+			],
+			'id_token' => [
+				'auth_time' => ['essential' => true],
+			]
+		]);
+	}
+
+	/**
+	 *
+	 *
+	 * @param type $type
+	 *
+	 * @return type
+	 */
+	protected function getValidateUrl($type)
+	{
+		$redirectUrl = Uri::getInstance();
+		$redirectUrl->setQuery(self::$validateUrl);
+		$redirectUrl->setScheme($type === 'web' ? 'https' : 'http');
+
+		return $redirectUrl->toString();
+	}
+
+	/**
+	 *
+	 * @param type $registrationEndpoint
+	 * @param type $type
+	 *
+	 * @return boolean|Registry
+	 */
+	protected function registerService($registrationEndpoint, $type = 'web')
+	{
+		$registrationDataJSON = json_encode(array(
+			'client_name' => 'Acme Service',
+			'application_type' => $type,
+			'redirect_uris' => [$this->getValidateUrl($type)],
+		));
+
+		$registrationResult = HttpFactory::getHttp()->post($registrationEndpoint, $registrationDataJSON, ['Content-Type' => 'application/json']);
+
+		if (empty($registrationResult->body) || $registrationResult->code != '200')
+		{
+			return false;
+		}
+
+		return new Registry($registrationResult->body);
+	}
 
 	/**
 	 * Try to read the issuer information from the DNS TXT Record.
@@ -244,7 +232,7 @@ class PlgSystemId4me extends CMSPlugin
 		return false;
 	}
 
-		/**
+	/**
 	 * Returns the issuer information from the DNS TXT Record.
 	 * As per definition we try the complete path and check for an valid TXT record.
 	 *
@@ -278,6 +266,12 @@ class PlgSystemId4me extends CMSPlugin
 		return false;
 	}
 
+	/**
+	 *
+	 * @param type $issuer
+	 *
+	 * @return boolean|Registry
+	 */
 	protected function getOpenIdConfiguration($issuer)
 	{
 		// https://id.test.denic.de/.well-known/openid-configuration
