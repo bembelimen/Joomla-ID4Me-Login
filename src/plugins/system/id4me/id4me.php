@@ -33,6 +33,12 @@ class PlgSystemId4me extends CMSPlugin
 	{
 		$issuer = $this->getIssuerbyIdentifier('idtest1.domainid.community');
 
+		// We can't do anythng when there is no issuer
+		if (!$issuer)
+		{
+			return false;
+		}
+
 		if ($this->app->isClient('site') || ($this->app->isClient('administrator') && Factory::getUser()->guest))
 		{
 			// Load JS
@@ -47,8 +53,9 @@ class PlgSystemId4me extends CMSPlugin
 		}
 
 		$uri = Uri::getInstance($issuer);
-
 		$uri->setScheme('https');
+
+		$issueConfiguration = $this->getOpenIdConfiguration($uri->toString());
 
 		$server = $this->getOpenId($issuer, $uri->toString());
 
@@ -201,5 +208,10 @@ class PlgSystemId4me extends CMSPlugin
 		return $server;
 	}
 
+	protected function getOpenIdConfiguration($issuer)
+	{
+		// https://id.test.denic.de/.well-known/openid-configuration
+		$json = json_encode(JHttpFactory::getHttp()->get('https://' . $issuer . '/.well-known/openid-configuration')->body);
+	}
 
 }
