@@ -19,6 +19,7 @@ use Joomla\String\StringHelper;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Http\HttpFactory;
 use Joomla\CMS\Router\Route;
+use Joomla\CMS\Factory;
 
 class PlgSystemId4me extends CMSPlugin
 {
@@ -46,7 +47,7 @@ class PlgSystemId4me extends CMSPlugin
 			// Load JS
 			echo $this->loadLayout('login');
 
-			Text::script('PLG_SYSTEM_ID4ME_LOGIN_BUTTON');
+			Text::script('PLG_SYSTEM_ID4ME_IDENTIFIER_LABEL');
 		}
 
 		if (!$issuer)
