@@ -24,7 +24,7 @@ use Joomla\CMS\Session\Session;
 
 class PlgSystemId4me extends CMSPlugin
 {
-	static $redirect_url = '?option=com_ajax&plugin=ID4MeLoginVLogin&format=raw';
+	static $redirect_url = 'option=com_ajax&plugin=ID4MeLogin&format=raw';
 	static $login_url = 'index.php?option=com_ajax&plugin=ID4MePrepare&format=raw';
 
 	protected $httpClient;
@@ -45,15 +45,16 @@ class PlgSystemId4me extends CMSPlugin
 		}
 	}
 
-	protected function performRegistration($registrationEndpoint)
+	protected function getRedirectUrl($registrationEndpoint, $type = 'web')
 	{
 		$redirectUrl = Uri::getInstance();
 		$redirectUrl->setQuery(self::$redirect_url);
-		$redirectUrl->setScheme('https');
+
+		$redirectUrl->setScheme($type === 'web' ? 'https' : 'http');
 
 		$registrationDataJSON = json_encode(array(
 			'client_name' => 'Acme Service',
-			'application_type' => 'web',
+			'application_type' => $type,
 			'redirect_uris' => [$redirectUrl->toString()],
 		));
 
@@ -64,10 +65,10 @@ class PlgSystemId4me extends CMSPlugin
 			return false;
 		}
 
-		return new Registry($openIdConfiguration->body);
+		return new Registry($registrationResult->body);
 	}
 
-	public static function onAjaxID4MePrepare()
+	public function onAjaxID4MePrepare()
 	{
 		$identifier = $this->app->input->getString('id4me-identifier');
 
@@ -86,13 +87,14 @@ class PlgSystemId4me extends CMSPlugin
 		$issueConfiguration = $this->getOpenIdConfiguration($issuerUrl->toString());
 
 		$registrationEndpoint = (string) $issueConfiguration->get('registration_endpoint');
-		$registrationResult = $this->performRegistration($registrationEndpoint);
+		$redirectUrl = $this->getRedirectUrl($registrationEndpoint, 'native');
 
-		if (!$registrationResult)
+		if (!$redirectUrl)
 		{
 			return false;
 		}
 
+		$this->app->redirect($redirectUrl);
 	}
 
 	protected function loadLayout($layout)
