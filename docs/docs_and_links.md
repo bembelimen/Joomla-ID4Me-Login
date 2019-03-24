@@ -2,11 +2,11 @@
 - https://id4me.org/for-developers/relying-party
 - https://gitlab.com/ID4me/documentation/blob/master/id4ME%20Relying%20Party%20Implementation%20Guide.adoc#Overview
 
-## Demo Implementierungen
+## Demo implementations
 - https://gitlab.com/ID4me/id4me-rp-client-php
 - https://gitlab.com/ID4me/id4me-plugin-wordpress
 
-## Demo Zugangsdaten
+## Demo access data
 identifier: idtest1.domainid.community / Password: WU9ZOZGC0DgzS9blLECd
 
 ## Demo Auth Service
