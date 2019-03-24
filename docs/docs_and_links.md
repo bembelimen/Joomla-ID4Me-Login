@@ -7,7 +7,7 @@
 - https://gitlab.com/ID4me/id4me-plugin-wordpress
 
 ## Demo Zugangsdaten
-identifier: idtest1.domainid.community / Password: WU9ZOZGC0DgzS9blLECd ()
+identifier: idtest1.domainid.community / Password: WU9ZOZGC0DgzS9blLECd
 
 ## Demo Auth Service
 https://demo.domainid.community/en/id4me-secured-area/
