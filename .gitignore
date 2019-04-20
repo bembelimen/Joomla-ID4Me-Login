@@ -1,0 +1,32 @@
+# IDE & System Related Files #
+.buildpath
+.project
+.settings
+.DS_Store
+.idea
+.vscode
+
+# Local System Files (i.e. cache, logs, etc.) #
+/administrator/cache
+/administrator/logs
+/cache
+/installation/cache
+/installation/sessions
+/libraries/autoload_psr4.php
+/tmp
+/configuration.php
+/.htaccess
+/web.config
+/.php_cs.cache
+
+# OSX #
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows #
+Thumbs.db
+Desktop.ini
+
+# Never ignore #
+!/.gitignore
