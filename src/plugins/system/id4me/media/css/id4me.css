@@ -1,0 +1,26 @@
+.id4me-wrapper {
+  max-width: 250px;
+  margin: 0 auto 10px;
+}
+.id4me-wrapper .id4me-button {
+  max-width: 100%;
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.id4me-wrapper label {
+  color: #fff;
+}
+.id4me-wrapper .id4me-fields {
+  background-color: #007a9d;
+  padding: 5px;
+  box-sizing: border-box;
+  border-radius: 5px;
+}
+.id4me-wrapper .id4me-fields .id4me-login {
+  border: 1px #fff solid;
+  border-radius: 5px;
+}
+.id4me-hide {
+  display: none !important;
+}
