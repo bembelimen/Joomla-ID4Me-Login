@@ -9,6 +9,7 @@
 	<authorUrl>www.wicked-software.de</authorUrl>
 	<version>1.0.0</version>
 	<description>PLG_SYSTEM_ID4ME_XML_DESCRIPTION</description>
+	<scriptfile>script.php</scriptfile>
 	<files>
 		<folder>language</folder>
 		<folder>tmpl</folder>
@@ -20,6 +21,9 @@
 		<folder>js</folder>
 		<folder>scss</folder>
 	</media>
+	<updateservers>
+		<server type="extension" name="ID4me Update Site">https://raw.githubusercontent.com/bembelimen/Joomla-ID4Me-Login/master/update.xml</server>
+	</updateservers>
 	<config>
 		<fields name="params">
 			<fieldset name="basic">
