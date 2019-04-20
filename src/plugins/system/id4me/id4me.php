@@ -21,20 +21,60 @@ use Joomla\CMS\Factory;
 use Joomla\CMS\Session\Session;
 use Joomla\CMS\User\UserHelper;
 
+/**
+ * Plugin class for ID4me
+ *
+ * @since  1.0
+ */
 class PlgSystemId4me extends CMSPlugin
 {
-	static $validateUrl = 'option=com_ajax&plugin=ID4MeLogin&format=raw';
-	static $loginUrl = 'index.php?option=com_ajax&plugin=ID4MePrepare&format=raw';
-
-	protected $httpClient;
-	protected $id4Me;
-
-	protected $app;
-
+	/**
+	 * Affects constructor behavior. If true, language files will be loaded automatically.
+	 *
+	 * @var    boolean
+	 * @since  1.0.0
+	 */
 	protected $autoloadLanguage = true;
 
-	protected $type = 'native';
+	/**
+	 * Application object.
+	 *
+	 * @var    CMSApplication
+	 * @since  1.0.0
+	 */
+	protected $app;
 
+	/**
+	 * The type of application we are runnig. We only use `native` when we are on localhost; Default is `web`
+	 *
+	 * @var    string
+	 * @since  1.0.0
+	 */
+	protected $applicationType = 'web';
+
+	/**
+	 * The redirect URL for the validation`
+	 *
+	 * @var    string
+	 * @since  1.0.0
+	 */
+	protected $redirectValidateUrl = 'option=com_ajax&plugin=ID4MeLogin&format=raw';
+
+	/**
+	 * The url used to trigger the login request to the identity provider
+	 *
+	 * @var    string
+	 * @since  1.0.0
+	 */
+	protected $formActionLoginUrl = 'index.php?option=com_ajax&plugin=ID4MePrepare&format=raw';
+
+	/**
+	 * Using this event we add our JaveScript and CSS code to add the id4me button to the login form.
+	 *
+	 * @return  void
+	 *
+	 * @since   1.0.0
+	 */
 	public function onBeforeRender()
 	{
 		if ($this->app->isClient('site') || ($this->app->isClient('administrator') && Factory::getUser()->guest))
@@ -42,15 +82,23 @@ class PlgSystemId4me extends CMSPlugin
 			// Load the language string
 			Text::script('PLG_SYSTEM_ID4ME_IDENTIFIER_LABEL');
 
-			// Load the layout with the JaveScript Code
+			// Load the layout with the JaveScript and CSS
 			echo $this->loadLayout('login');
+
+			// When we are at locahost we need to set the application type to native
+			if (strpos(Uri::getInstance()->toString(), 'http://localhost/'))
+			{
+				$this->applicationType = 'native';
+			}
 		}
 	}
 
 	/**
-	 * Uses login credentials and redirect to the login field from the provider
+	 * This com_ajax Endpoint detects, based on the identifier, the Issuer and redirects to the login page of the Issuer
 	 *
-	 * @return boolean
+	 * @return  void
+	 *
+	 * @since   1.0.0
 	 */
 	public function onAjaxID4MePrepare()
 	{
@@ -61,27 +109,26 @@ class PlgSystemId4me extends CMSPlugin
 		// Validate identifier:
 		$issuer = $this->getIssuerbyIdentifier($identifier);
 
-		$issuerUrl = Uri::getInstance($issuer);
-		$issuerUrl->setScheme('https');
-
-		$issuerConfiguration = $this->getOpenIdConfiguration($issuerUrl->toString());
+		$issuerConfiguration = $this->getOpenIdConfiguration(Uri::getInstance($issuer)->setScheme('https')->toString());
 
 		$registrationEndpoint = (string) $issuerConfiguration->get('registration_endpoint');
 		$registrationResult = $this->registerService($registrationEndpoint);
 
-		$client_id = $registrationResult->get('client_id');
-		$client_secret = $registrationResult->get('client_secret');
+		$clientId = $registrationResult->get('client_id');
+		$clientSecret = $registrationResult->get('client_secret');
 		$state = UserHelper::genRandomPassword(100);
 
-		$this->app->setUserState('id4me.client_id', $client_id);
-		$this->app->setUserState('id4me.client_secret', $client_secret);
+		$this->app->setUserState('id4me.client_id', $clientId);
+		$this->app->setUserState('id4me.client_secret', $clientSecret);
 		$this->app->setUserState('id4me.state', $state);
 
-		$authorizationUrl = $this->getAuthorizationUrl($issuerConfiguration, $identifier, $client_id, $state);
+		$authorizationUrl = $this->getAuthorizationUrl($issuerConfiguration, $identifier, $clientId, $state);
 
 		if (!$authorizationUrl)
 		{
-			return false;
+			// We don't have an authorization URL so we can't do anything here.
+			$this->app->enqueueMessage(Text::_('PLG_SYSTEM_ID4ME_NO_AUTHORIZATION_URL'), 'error');
+			$this->app->redirect('index.php');
 		}
 
 		$this->app->redirect($authorizationUrl);
@@ -89,45 +136,60 @@ class PlgSystemId4me extends CMSPlugin
 
 	/**
 	 * Endpoint for the final login/registration process
+	 *
+	 * @return  void
+	 *
+	 * @since   1.0.0
 	 */
 	public function onAjaxID4MeLogin()
 	{
-		$code = $this->app->input->get('code');
-		$state = $this->app->input->get('state');
+		$issuerConfiguration = $this->getOpenIdConfiguration(
+			Uri::getInstance(
+				$this->getIssuerbyIdentifier(
+					$this->app->getUserState('id4me.identifier')
+				)
+			)
+			->setScheme('https')
+			->toString()
+		);
 
-		$identifier = $this->app->getUserState('id4me.identifier');
+		$bearerToken = $this->validateAuthTokens(
+			$this->getAuthTokens(
+				$this->app->input->get('code'),
+				$issuerConfiguration->get('token_endpoint'),
+				$this->app->getUserState('id4me.client_id'),
+				$this->app->getUserState('id4me.client_secret')
+			)
+		);
 
-		// Validate identifier:
-		$issuer = $this->getIssuerbyIdentifier($identifier);
-
-		$issuerUrl = Uri::getInstance($issuer);
-		$issuerUrl->setScheme('https');
-
-		$issuerConfiguration = $this->getOpenIdConfiguration($issuerUrl->toString());
-
-		$registrationEndpoint = (string) $issuerConfiguration->get('registration_endpoint');
-		$registrationResult = $this->registerService($registrationEndpoint);
-
-		$client_id = $this->app->getUserState('id4me.client_id');
-		$client_secret = $this->app->getUserState('id4me.client_secret');
-
-		$tokenEndpoint = (string) $issuerConfiguration->get('token_endpoint');
-
-		$tokens = $this->getAuthTokens($code, $tokenEndpoint, $client_id, $client_secret);
-
-		$bearerToken = $this->validateAuthTokens($tokens);
-
-		$userinfoEndpoint = (string) $issuerConfiguration->get('userinfo_endpoint');
-
-		$claims = $this->getClaims($userinfoEndpoint, $bearerToken);
+		$claims = $this->getClaims($issuerConfiguration->get('userinfo_endpoint'), $bearerToken);
 
 	}
 
+	/**
+	 * Something unexpected happend throw an exception
+	 *
+	 * @return  void
+	 * @throws  RuntimeException
+	 *
+	 * @since   1.0.0
+	 */
 	protected function dieHard()
 	{
-		throw new Exception(Text::_('JLIB_APPLICATION_ERROR_ACCESS_FORBIDDEN'));
+		throw new RuntimeException(Text::_('JLIB_APPLICATION_ERROR_ACCESS_FORBIDDEN'));
 	}
 
+	/**
+	 * Get the claimed fields
+	 *
+	 * @param  string  $userinfoEndpoint  The User Info Endpoint URL
+	 * @param  string  $token             The token to request the User Information
+	 *
+	 * @return  object
+	 * @throws  RuntimeException
+	 *
+	 * @since   1.0.0
+	 */
 	protected function getClaims($userinfoEndpoint, $token)
 	{
 		$headers = [
@@ -149,12 +211,19 @@ class PlgSystemId4me extends CMSPlugin
 		return $this->loadRealClaims($claims);
 	}
 
-	protected function loadRealClaims($claimResult)
+	/**
+	 * Load the content of the claims so we can build our user object
+	 *
+	 * @param   Registry  $claims  An Registry Object containing the claims
+	 *
+	 * @return  object   An stdClass Object containing username and mail
+	 *
+	 * @since   1.0.0
+	 */
+	protected function loadRealClaims($claims)
 	{
-		$claimNames = $claimResult->get('_claim_names');
-		$claimRessources = (array) $claimResult->get('_claim_sources');
-
-		$endpoints = [];
+		$claimNames      = $claims->get('_claim_names');
+		$claimRessources = (array) $claims->get('_claim_sources');
 
 		$user = new stdClass;
 
@@ -163,12 +232,31 @@ class PlgSystemId4me extends CMSPlugin
 			$this->dieHard();
 		}
 
-		$user->name = $this->loadClaimByKey($claimRessources[$claimNames->given_name]->endpoint, $claimRessources[$claimNames->given_name]->access_token, 'given_name');
-		$user->email = $this->loadClaimByKey($claimRessources[$claimNames->given_name]->endpoint, $claimRessources[$claimNames->given_name]->access_token, 'endpoint');
+		$user->name = $this->loadClaimByKey(
+			$claimRessources[$claimNames->given_name]->endpoint,
+			$claimRessources[$claimNames->given_name]->access_token,
+			'given_name'
+		);
+		$user->email = $this->loadClaimByKey(
+			$claimRessources[$claimNames->email]->endpoint,
+			$claimRessources[$claimNames->email]->access_token,
+			'email'
+		);
 
 		return $user;
 	}
 
+	/**
+	 * Reads the actual content of an claim by key
+	 *
+	 * @param   string  $endpoint  The claim endpoint
+	 * @param   string  $token    The claim token
+	 * @param   string  $name      The claim name
+	 *
+	 * @return  string  The string readed out of the claim
+	 *
+	 * @since   1.0.0
+	 */
 	protected function loadClaimByKey($endpoint, $token, $name)
 	{
 		static $ressources = [];
@@ -195,34 +283,66 @@ class PlgSystemId4me extends CMSPlugin
 		return $ressources[$endpoint][$token]->get($name);
 	}
 
-	protected function validateCLaims($claimResult)
+	/**
+	 * Validate the claims and make sure all required fields is there.
+	 *
+	 * @param   Registry  $claims  An Registry Object containing the claims
+	 *
+	 * @return  boolean  True on success else false
+	 *
+	 * @since   1.0.0
+	 */
+	protected function validateClaims($claims)
 	{
 		return true;
 	}
 
-	protected function getAuthTokens($code, $tokenEndpoint, $client_id, $client_secret)
+	/**
+	 * Get the tokens for our clientId from the tokenEndpoint
+	 *
+	 * @param   string  $code           The code
+	 * @param   string  $tokenEndpoint  The endpoint for requesting tokens
+	 * @param   string  $clientId       Our clientID
+	 * @param   string  $clientSecret   Our clientSecret
+	 *
+	 * @return  boolean  True on success else false
+	 *
+	 * @since   1.0.0
+	 */
+	protected function getAuthTokens($code, $tokenEndpoint, $clientId, $clientSecret)
 	{
-		$authTokenRequest = http_build_query([
-			'grant_type' => 'authorization_code',
-			'code' => $code,
-			'redirect_uri' => $this->getValidateUrl(),
-		]);
+		$authTokenRequest = http_build_query(
+			[
+				'grant_type' => 'authorization_code',
+				'code' => $code,
+				'redirect_uri' => $this->getValidateUrl(),
+			]
+		);
 
 		$headers = [
 			'Content-Type' => 'application/x-www-form-urlencoded',
-			'Authorization' => 'Basic ' . base64_encode($client_id . ':' . $client_secret)
+			'Authorization' => 'Basic ' . base64_encode($clientId . ':' . $clientSecret)
 		];
 
-		$registrationResult = HttpFactory::getHttp()->post($tokenEndpoint, $authTokenRequest, $headers);
+		$tokenResult = HttpFactory::getHttp()->post($tokenEndpoint, $authTokenRequest, $headers);
 
-		if (empty($registrationResult->body) || $registrationResult->code != '200')
+		if (empty($tokenResult->body) || $tokenResult->code != '200')
 		{
 			$this->dieHard();
 		}
 
-		return new Registry($registrationResult->body);
+		return new Registry($tokenResult->body);
 	}
 
+	/**
+	 * Validate the auth token
+	 *
+	 * @param  Registry  $tokens  An Registry Object containing the tokens
+	 *
+	 * @return  string   The access Token
+	 *
+	 * @since   1.0.0
+	 */
 	protected function validateAuthTokens($tokens)
 	{
 		// @TODO token validation
@@ -237,9 +357,11 @@ class PlgSystemId4me extends CMSPlugin
 	/**
 	 * Loads an overrideable tmpl file
 	 *
-	 * @param string $layout The layout name
+	 * @param  string  $layout  The layout name
 	 *
-	 * @return string  The final template content
+	 * @return  string  The final template content
+	 *
+	 * @since   1.0.0
 	 */
 	protected function loadLayout($layout)
 	{
@@ -255,40 +377,49 @@ class PlgSystemId4me extends CMSPlugin
 		return $result;
 	}
 
-	protected function getAuthorizationUrl($issuerConfiguration, $identifier, $client_id, $state)
+	/**
+	 * Return the autorization URL
+	 *
+	 * @param   Registry  $issuerConfiguration  The Registry object with the issuer configuration
+	 * @param   string    $identifier           The provided identifier
+	 * @param   string    $clientId             Our clientId
+	 * @param   string    $state                The random state
+	 *
+	 * @return  string  The Autorization URL
+	 *
+	 * @since   1.0.0
+	 */
+	protected function getAuthorizationUrl($issuerConfiguration, $identifier, $clientId, $state)
 	{
-		$claimsSupported = $issuerConfiguration->get('claims_supported');
-		$claims = $this->getUserInfoClaims($claimsSupported);
-
-		$authorizationEndpoint = $issuerConfiguration->get('authorization_endpoint');
-
-		$authorizationUrl = Uri::getInstance($authorizationEndpoint);
-		$authorizationUrl->setVar('claims', urlencode($claims));
+		$authorizationUrl = Uri::getInstance($issuerConfiguration->get('authorization_endpoint'));
+		$authorizationUrl->setVar('claims', urlencode($this->getUserInfoClaims($issuerConfiguration->get('claims_supported'))));
 		$authorizationUrl->setVar('scope', 'openid');
 		$authorizationUrl->setVar('response_type', 'code');
-		$authorizationUrl->setVar('client_id', $client_id);
+		$authorizationUrl->setVar('client_id', $clientId);
 		$authorizationUrl->setVar('redirect_uri', urlencode($this->getValidateUrl()));
 		$authorizationUrl->setVar('login_hint', $identifier);
 		$authorizationUrl->setVar('state', $state);
-		$authorizationUrl->setScheme($this->type === 'web' ? 'https' : 'http');
+		$authorizationUrl->setScheme($this->applicationType === 'web' ? 'https' : 'http');
 
 		return $authorizationUrl->toString();
 	}
 
 	/**
+	 * Returns the claims we request from the issuer
 	 *
+	 * @param   array  $claimsSupported  List of supportet claims by the issuer
 	 *
-	 * @param boolean $claimsSupported
+	 * @return string  json encoded claims
 	 *
-	 * @return void
+	 * @since  1.0.0
 	 */
 	protected function getUserInfoClaims($claimsSupported)
 	{
 		return json_encode([
 			'userinfo' => [
-				'given_name' => ['essential' => true, 'reason' => 'In order to create an account'],
-				'email' => ['essential' => true, 'reason' => 'To assure smooth communication'],
-				'email_verified' => ['reason' => 'To skip the E-mail verification'],
+				'given_name' => ['essential' => true, 'reason' => Text::_('PLG_SYSTEM_ID4ME_CLAIM_REASON_GIVEN_NAME')],
+				'email' => ['essential' => true, 'reason' => Text::_('PLG_SYSTEM_ID4ME_CLAIM_REASON_EMAIL')],
+				'email_verified' => ['essential' => true, 'reason' => Text::_('PLG_SYSTEM_ID4ME_CLAIM_REASON_EMAILVERIFIED')],
 			],
 			'id_token' => [
 				'auth_time' => ['essential' => true],
@@ -297,35 +428,42 @@ class PlgSystemId4me extends CMSPlugin
 	}
 
 	/**
+	 * Returns the validation URL
 	 *
+	 * @return   string  The validation URL
 	 *
-	 *
-	 * @return string  The validateion URL
+	 * @since   1.0.0
 	 */
 	protected function getValidateUrl()
 	{
-		$redirectUrl = Uri::getInstance();
-		$redirectUrl->setQuery(self::$validateUrl);
-		$redirectUrl->setScheme($this->type === 'web' ? 'https' : 'http');
-
-		return $redirectUrl->toString();
+		return Uri::getInstance()
+			->setQuery(self::$redirectValidateUrl)
+			->setScheme($this->applicationType === 'web' ? 'https' : 'http')
+			->toString();
 	}
 
 	/**
+	 * Register our service to get the clientId and clientSecret
 	 *
-	 * @param type $registrationEndpoint
+	 * @param   string  $registrationEndpoint The Registration endpoint URL
 	 *
-	 * @return boolean|Registry
+	 * @return  Registry An Registry object containing the result of the registration request
+	 *
+	 * @since  1.0.0
 	 */
 	protected function registerService($registrationEndpoint)
 	{
-		$registrationDataJSON = json_encode(array(
-			'client_name' => $this->app->get('sitename'),
-			'application_type' => $this->type,
-			'redirect_uris' => [$this->getValidateUrl()],
-		));
+		$registrationDataJSON = json_encode([
+			'client_name'      => $this->app->get('sitename'),
+			'application_type' => $this->applicationType,
+			'redirect_uris'    => [$this->getValidateUrl()],
+		]);
 
-		$registrationResult = HttpFactory::getHttp()->post($registrationEndpoint, $registrationDataJSON, ['Content-Type' => 'application/json']);
+		$registrationResult = HttpFactory::getHttp()->post(
+			$registrationEndpoint,
+			$registrationDataJSON,
+			['Content-Type' => 'application/json']
+		);
 
 		if (empty($registrationResult->body) || !in_array($registrationResult->code, ['200', '201']))
 		{
@@ -338,14 +476,15 @@ class PlgSystemId4me extends CMSPlugin
 	/**
 	 * Try to read the issuer information from the DNS TXT Record.
 	 *
-	 * @param  string  $hostname  The identifier/Domain of the user to authenticate
+	 * @param   string  $hostname  The identifier/Domain of the user to authenticate
+	 * 
+	 * @return  string  Issuer URL
 	 *
 	 * @since  1.0.0
 	 */
 	private function getIssuerbyHostname($hostname)
 	{
 		$hostname = '_openid.' . $hostname;
-
 		$records = dns_get_record($hostname, DNS_TXT);
 
 		if (empty($records) || !is_array($records))
@@ -354,7 +493,6 @@ class PlgSystemId4me extends CMSPlugin
 		}
 
 		$issuer = false;
-
 		$rexep = '/iss=([^;]+)/';
 
 		foreach ($records as $record)
@@ -377,7 +515,9 @@ class PlgSystemId4me extends CMSPlugin
 	 * Returns the issuer information from the DNS TXT Record.
 	 * As per definition we try the complete path and check for an valid TXT record.
 	 *
-	 * @param  string  $identifier  The identifier/Domain of the user to authenticate
+	 * @param   string  $identifier  The identifier/Domain of the user to authenticate
+	 *
+	 * @return  string  Issuer URL
 	 *
 	 * @since  1.0.0
 	 */
@@ -388,6 +528,7 @@ class PlgSystemId4me extends CMSPlugin
 
 		$i = 0;
 
+		// Read the Identifier recursive and check who is the Issuer 
 		do
 		{
 			$reducedIdentifier = implode('.', $hostparts);
@@ -407,14 +548,16 @@ class PlgSystemId4me extends CMSPlugin
 	}
 
 	/**
+	 * Return the OpenId Configuration from an given Issuer
 	 *
-	 * @param type $issuer
+	 * @param   string  $issuer  The Issuer URL
 	 *
-	 * @return boolean|Registry
+	 * @return  Registry The Registry object with the issuer configuration
+	 *
+	 * @since  1.0.0
 	 */
 	protected function getOpenIdConfiguration($issuer)
 	{
-		// https://id.test.denic.de/.well-known/openid-configuration
 		$openIdConfiguration = HttpFactory::getHttp()->get(
 			$issuer . '/.well-known/openid-configuration'
 		);
@@ -426,5 +569,4 @@ class PlgSystemId4me extends CMSPlugin
 
 		return new Registry($openIdConfiguration->body);
 	}
-
 }

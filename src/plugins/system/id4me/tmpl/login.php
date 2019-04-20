@@ -27,7 +27,7 @@ $js = "
 				buttonimage: " . json_encode(HTMLHelper::_('image', 'plg_system_id4me/id4me-start-login.svg', '', null, true, 1)) . ",
 				loginimage: " . json_encode(HTMLHelper::_('image', 'plg_system_id4me/id4me-login-button.svg', '', null, true, 1)) . ",
 				token: '" . HTMLHelper::_('form.token') . "',
-				formAction: '" . str_replace('/administrator/', '/', Route::_(self::$loginUrl)) . "',
+				formAction: '" . str_replace('/administrator/', '/', Route::_(self::$formActionLoginUrl)) . "',
 				context: '" . (Factory::getApplication()->isClient('administrator') ? 'admin' : 'site') . "'
 			});
 		}
