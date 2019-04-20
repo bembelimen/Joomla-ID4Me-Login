@@ -121,8 +121,6 @@ class PlgSystemId4me extends CMSPlugin
 
 		$claims = $this->getClaims($userinfoEndpoint, $bearerToken);
 
-		echo '<pre>';print_r($claims);exit('foo');
-
 	}
 
 	protected function dieHard()
@@ -167,8 +165,6 @@ class PlgSystemId4me extends CMSPlugin
 
 		$user->name = $this->loadClaimByKey($claimRessources[$claimNames->given_name]->endpoint, $claimRessources[$claimNames->given_name]->access_token, 'given_name');
 		$user->email = $this->loadClaimByKey($claimRessources[$claimNames->given_name]->endpoint, $claimRessources[$claimNames->given_name]->access_token, 'endpoint');
-
-		print_r($user);exit;
 
 		return $user;
 	}
