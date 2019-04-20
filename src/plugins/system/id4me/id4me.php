@@ -9,8 +9,6 @@
 
 defined('_JEXEC') or die;
 
-require_once __DIR__ . '/library/vendor/autoload.php';
-
 use Joomla\CMS\Plugin\CMSPlugin;
 use Joomla\CMS\Plugin\PluginHelper;
 use Joomla\CMS\Uri\Uri;
