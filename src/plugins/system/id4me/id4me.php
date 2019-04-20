@@ -182,8 +182,8 @@ class PlgSystemId4me extends CMSPlugin
 	/**
 	 * Get the claimed fields
 	 *
-	 * @param  string  $userinfoEndpoint  The User Info Endpoint URL
-	 * @param  string  $token             The token to request the User Information
+	 * @param   string  $userinfoEndpoint  The User Info Endpoint URL
+	 * @param   string  $token             The token to request the User Information
 	 *
 	 * @return  object
 	 * @throws  RuntimeException
@@ -250,7 +250,7 @@ class PlgSystemId4me extends CMSPlugin
 	 * Reads the actual content of an claim by key
 	 *
 	 * @param   string  $endpoint  The claim endpoint
-	 * @param   string  $token    The claim token
+	 * @param   string  $token     The claim token
 	 * @param   string  $name      The claim name
 	 *
 	 * @return  string  The string readed out of the claim
@@ -337,7 +337,7 @@ class PlgSystemId4me extends CMSPlugin
 	/**
 	 * Validate the auth token
 	 *
-	 * @param  Registry  $tokens  An Registry Object containing the tokens
+	 * @param   Registry  $tokens  An Registry Object containing the tokens
 	 *
 	 * @return  string   The access Token
 	 *
@@ -357,7 +357,7 @@ class PlgSystemId4me extends CMSPlugin
 	/**
 	 * Loads an overrideable tmpl file
 	 *
-	 * @param  string  $layout  The layout name
+	 * @param   string  $layout  The layout name
 	 *
 	 * @return  string  The final template content
 	 *
@@ -477,7 +477,7 @@ class PlgSystemId4me extends CMSPlugin
 	 * Try to read the issuer information from the DNS TXT Record.
 	 *
 	 * @param   string  $hostname  The identifier/Domain of the user to authenticate
-	 * 
+	 *
 	 * @return  string  Issuer URL
 	 *
 	 * @since  1.0.0
@@ -528,7 +528,7 @@ class PlgSystemId4me extends CMSPlugin
 
 		$i = 0;
 
-		// Read the Identifier recursive and check who is the Issuer 
+		// Read the Identifier recursive and check who is the Issuer
 		do
 		{
 			$reducedIdentifier = implode('.', $hostparts);
