@@ -77,7 +77,7 @@ class PlgSystemId4me extends CMSPlugin
 	 * @var    string
 	 * @since  1.0.0
 	 */
-	static $formActionLoginUrl = 'index.php?option=com_ajax&plugin=ID4MePrepare&format=raw';
+	static $formActionLoginUrl = 'index.php?option=com_ajax&plugin=ID4MePrepare&format=raw&client={client}';
 
 	/**
 	 * The user edit form contexts
@@ -97,9 +97,9 @@ class PlgSystemId4me extends CMSPlugin
 	 * @param   object  &$subject  The object to observe
 	 * @param   array   $config    An array that holds the plugin configuration
 	 *
-	 * @since   1.5
+	 * @since   1.0.0
 	 */
-	public function __construct(& $subject, $config)
+	public function __construct(&$subject, $config)
 	{
 		parent::__construct($subject, $config);
 
@@ -124,14 +124,6 @@ class PlgSystemId4me extends CMSPlugin
 			|| ($this->app->isClient('administrator') && Factory::getUser()->guest))
 			&& (NULL === $this->app->getUserState('id4me.identifier')))
 		{
-			// Set the login client
-			$this->app->setUserState('id4me.client', 'site');
-
-			if (strpos(Uri::getInstance()->toString(array('path')), '/administrator'))
-			{
-				$this->app->setUserState('id4me.client', 'administrator');
-			}
-
 			// Load the language string
 			Text::script('PLG_SYSTEM_ID4ME_IDENTIFIER_LABEL');
 
@@ -160,6 +152,9 @@ class PlgSystemId4me extends CMSPlugin
 
 			return;
 		}
+
+		// Get the client form the current URL
+		$this->app->setUserState('id4me.client', Uri::getInstance()->getVar('client'));
 
 		// Get Issuer
 		$issuer = Uri::getInstance($this->getIssuerbyIdentifier($identifier));
@@ -231,9 +226,12 @@ class PlgSystemId4me extends CMSPlugin
 				'action'       => 'core.login.site',
 			);
 
+			$returnUrl = 'index.php';
+
 			if ($this->app->getUserState('id4me.client') === 'administrator')
 			{
 				$options['action'] = 'core.login.admin';
+				$returnUrl         = Uri::root() . 'administrator/index.php';
 			}
 
 			// OK, the credentials are authenticated and user is authorised. Let's fire the onLogin event.
@@ -253,14 +251,14 @@ class PlgSystemId4me extends CMSPlugin
 
 				// The user is successfully logged in. Run the after login events
 				$this->app->triggerEvent('onUserAfterLogin', array($options));
-				$this->app->redirect('index.php');
+				$this->app->redirect($returnUrl);
 
 				return;
 			}
 
 			// We don't have an authorization URL so we can't do anything here.
 			$this->app->enqueueMessage(Text::_('PLG_SYSTEM_ID4ME_LOGIN_FAILED'), 'error');
-			$this->app->redirect('index.php');
+			$this->app->redirect($returnUrl);
 
 			return;
 		}
