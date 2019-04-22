@@ -122,6 +122,9 @@ class PlgSystemId4me extends CMSPlugin
 	{
 		if ($this->app->isClient('site') || ($this->app->isClient('administrator') && Factory::getUser()->guest))
 		{
+			// Set the login client
+			$this->app->setUserState('id4me.client', $this->app->getName());
+
 			// Load the language string
 			Text::script('PLG_SYSTEM_ID4ME_IDENTIFIER_LABEL');
 
@@ -141,7 +144,6 @@ class PlgSystemId4me extends CMSPlugin
 	{
 		$identifier = $this->app->input->getString('id4me-identifier');
 		$this->app->setUserState('id4me.identifier', $identifier);
-		$this->app->setUserState('id4me.client', $this->app->getName());
 
 		if ($this->getJoomlaUserById4MeIdentifier() === false && $this->getId4MeRegistrationEnabled() === false)
 		{
@@ -244,6 +246,7 @@ class PlgSystemId4me extends CMSPlugin
 
 				// The user is successfully logged in. Run the after login events
 				$this->app->triggerEvent('onUserAfterLogin', array($options));
+				$this->app->redirect('index.php');
 
 				return;
 			}
