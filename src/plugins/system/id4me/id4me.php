@@ -61,7 +61,7 @@ class PlgSystemId4me extends CMSPlugin
 	 * @var    string
 	 * @since  1.0.0
 	 */
-	protected $redirectValidateUrl = 'option=com_ajax&plugin=ID4MeLogin&format=raw';
+	static $redirectValidateUrl = 'option=com_ajax&plugin=ID4MeLogin&format=raw';
 
 	/**
 	 * The url used to trigger the login request to the identity provider
@@ -69,7 +69,7 @@ class PlgSystemId4me extends CMSPlugin
 	 * @var    string
 	 * @since  1.0.0
 	 */
-	protected $formActionLoginUrl = 'index.php?option=com_ajax&plugin=ID4MePrepare&format=raw';
+	static $formActionLoginUrl = 'index.php?option=com_ajax&plugin=ID4MePrepare&format=raw';
 
 	/**
 	 * The user edit form contexts
