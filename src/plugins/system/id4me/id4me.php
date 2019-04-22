@@ -120,10 +120,17 @@ class PlgSystemId4me extends CMSPlugin
 	 */
 	public function onBeforeRender()
 	{
-		if ($this->app->isClient('site') || ($this->app->isClient('administrator') && Factory::getUser()->guest))
+		if (($this->app->isClient('site')
+			|| ($this->app->isClient('administrator') && Factory::getUser()->guest))
+			&& (NULL === $this->app->getUserState('id4me.identifier')))
 		{
 			// Set the login client
-			$this->app->setUserState('id4me.client', $this->app->getName());
+			$this->app->setUserState('id4me.client', 'site');
+
+			if (strpos(Uri::getInstance()->toString(array('path')), '/administrator'))
+			{
+				$this->app->setUserState('id4me.client', 'administrator');
+			}
 
 			// Load the language string
 			Text::script('PLG_SYSTEM_ID4ME_IDENTIFIER_LABEL');
