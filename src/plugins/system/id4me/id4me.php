@@ -141,6 +141,7 @@ class PlgSystemId4me extends CMSPlugin
 	{
 		$identifier = $this->app->input->getString('id4me-identifier');
 		$this->app->setUserState('id4me.identifier', $identifier);
+		$this->app->setUserState('id4me.client', $this->app->getName());
 
 		if ($this->getJoomlaUserById4MeIdentifier() === false && $this->getId4MeRegistrationEnabled() === false)
 		{
@@ -218,14 +219,10 @@ class PlgSystemId4me extends CMSPlugin
 			$options = array(
 				'autoregister' => false,
 				'remember'     => false,
+				'action'       => 'core.login.site',
 			);
 
-			if ($this->app->isClient('site'))
-			{
-				$options['action'] = 'core.login.site';
-			}
-			
-			if ($this->app->isClient('administrator'))
+			if ($this->app->getUserState('id4me.client') === 'administrator')
 			{
 				$options['action'] = 'core.login.admin';
 			}
