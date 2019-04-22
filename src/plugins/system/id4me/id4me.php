@@ -239,7 +239,7 @@ class PlgSystemId4me extends CMSPlugin
 	}
 
 	/**
-	 * Add id4me field to the user
+	 * Add id4me field to the user edit form
 	 *
 	 * @param   JForm  $form  The form to be altered.
 	 * @param   mixed  $data  The associated data for the form.
@@ -258,13 +258,13 @@ class PlgSystemId4me extends CMSPlugin
 
 		$form->load('
 			<form>
-				<fieldset name="id4me">
+				<fieldset name="id4me" label="PLG_SYSTEM_ID4ME_FIELDSET_LABEL">
 					<field
 						name="id4meIdentifier"
 						type="text"
 						label="PLG_SYSTEM_ID4ME_IDENTIFIER_LABEL"
 						description="PLG_SYSTEM_ID4ME_IDENTIFIER_DESC"
-					</field>
+					/>
 				</fieldset>
 			</form>'
 		);
@@ -323,7 +323,7 @@ class PlgSystemId4me extends CMSPlugin
 	}
 
 	/**
-	 * Saves user id4me data
+	 * Saves user id4me data to the database
 	 *
 	 * @param   array    $data    entered user data
 	 * @param   boolean  $isNew   true if this is a new user
