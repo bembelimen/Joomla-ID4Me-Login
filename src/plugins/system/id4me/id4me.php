@@ -189,7 +189,31 @@ class PlgSystemId4me extends CMSPlugin
 
 		if ($joomlaUser instanceof \User)
 		{
-			// We have a valid user lets log this user in.
+			// OK, the credentials are authenticated and user is authorised. Let's fire the onLogin event.
+			$results = $this->app->triggerEvent('onUserLogin', array((array) $joomlaUser, array()));
+
+			/*
+			 * If any of the user plugins did not successfully complete the login routine
+			 * then the whole method fails.
+			 *
+			 * Any errors raised should be done in the plugin as this provides the ability
+			 * to provide much more information about why the routine may have failed.
+			 */
+			if ($results === false)
+			{
+				// We don't have an authorization URL so we can't do anything here.
+				$this->app->enqueueMessage(Text::_('PLG_SYSTEM_ID4ME_LOGIN_FAILED'), 'error');
+				$this->app->redirect('index.php');
+			}
+
+			if (in_array(false, $results, true) == false)
+			{
+				$options['user'] = Factory::getUser();
+				$options['responseType'] = 'id4me';
+
+				// The user is successfully logged in. Run the after login events
+				$this->app->triggerEvent('onUserAfterLogin', array($options));
+			}
 
 			return;
 		}
