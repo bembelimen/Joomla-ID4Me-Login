@@ -267,7 +267,7 @@ class PlgSystemId4me extends CMSPlugin
 			<form>
 				<fieldset name="id4me" label="PLG_SYSTEM_ID4ME_FIELDSET_LABEL">
 					<field
-						name="id4me-identifier"
+						name="id4me_identifier"
 						type="text"
 						label="PLG_SYSTEM_ID4ME_IDENTIFIER_LABEL"
 						description="PLG_SYSTEM_ID4ME_IDENTIFIER_DESC"
@@ -275,6 +275,42 @@ class PlgSystemId4me extends CMSPlugin
 				</fieldset>
 			</form>'
 		);
+	}
+
+	/**
+	 * Runs on content preparation
+	 *
+	 * @param   string  $context  The context for the data
+	 * @param   object  $data     An object containing the data for the form.
+	 *
+	 * @return  boolean
+	 *
+	 * @since   1.6
+	 */
+	public function onContentPrepareData($context, $data)
+	{
+		// Check for the user edit forms
+		if (!in_array($context, $this->supportedContext))
+		{
+			return true;
+		}
+
+		$query = $this->db->getQuery(true)
+			->select($this->db->quoteName(['profile_value']))
+			->from('#__user_profiles')
+			->where($this->db->quoteName('user_id') . ' = ' . Factory::getUser()->id)
+			->where($this->db->quoteName('profile_key') . ' = ' . $this->db->quote('id4me.identifier'));
+
+		$this->db->setQuery($query);
+
+		try
+		{
+			$data->id4me_identifier = (string) $this->db->loadResult();
+		}
+		catch (\RuntimeException $e)
+		{
+			// We can not read the field but this is not critial the field will just be empty
+		}
 	}
 
 	/**
@@ -291,7 +327,7 @@ class PlgSystemId4me extends CMSPlugin
 	 */
 	public function onUserBeforeSave($user, $isnew, $data)
 	{
-		$identifier = $data['id4me-identifier'];
+		$identifier = $data['id4me_identifier'];
 		
 		if (!empty($identifier))
 		{
@@ -344,7 +380,7 @@ class PlgSystemId4me extends CMSPlugin
 	public function onUserAfterSave($data, $isNew, $result, $error)
 	{
 		$userId     = ArrayHelper::getValue($data, 'id', 0, 'int');
-		$identifier = $data['id4me-identifier'];
+		$identifier = $data['id4me_identifier'];
 
 		$query = $this->db->getQuery(true)
 			->delete($this->db->quoteName('#__user_profiles'))
@@ -395,7 +431,7 @@ class PlgSystemId4me extends CMSPlugin
 		$query = $this->db->getQuery(true)
 			->select($this->db->quoteName(['user_id']))
 			->from('#__user_profiles')
-			->where($this->db->quoteName('profile_value') . ' = ' . $this->app->getUserState('id4me.identifier'))
+			->where($this->db->quoteName('profile_value') . ' = ' . $this->db->quote($this->app->getUserState('id4me.identifier')))
 			->where($this->db->quoteName('profile_key') . ' = ' . $this->db->quote('id4me.identifier'));
 
 		$this->db->setQuery($query);
@@ -421,7 +457,7 @@ class PlgSystemId4me extends CMSPlugin
 
 		try
 		{
-			$userId = (array) $this->db->loadResult();
+			$userId = (int) $this->db->loadResult();
 		}
 		catch (\RuntimeException $e)
 		{
