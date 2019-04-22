@@ -224,14 +224,16 @@ class PlgSystemId4me extends CMSPlugin
 				'autoregister' => false,
 				'remember'     => false,
 				'action'       => 'core.login.site',
+				'redirect_url' => Uri::base() . 'index.php',
 			);
 
 			$returnUrl = 'index.php';
 
 			if ($this->app->getUserState('id4me.client') === 'administrator')
 			{
-				$options['action'] = 'core.login.admin';
-				$returnUrl         = Uri::root() . 'administrator/index.php';
+				$options['action']       = 'core.login.admin';
+				$options['group']        = 'Public Backend';
+				$options['redirect_url'] = Uri::root() . 'administrator/index.php?option=com_cpanel';
 			}
 
 			// OK, the credentials are authenticated and user is authorised. Let's fire the onLogin event.
@@ -251,14 +253,14 @@ class PlgSystemId4me extends CMSPlugin
 
 				// The user is successfully logged in. Run the after login events
 				$this->app->triggerEvent('onUserAfterLogin', array($options));
-				$this->app->redirect($returnUrl);
+				$this->app->redirect($options['redirect_url']);
 
 				return;
 			}
 
 			// We don't have an authorization URL so we can't do anything here.
 			$this->app->enqueueMessage(Text::_('PLG_SYSTEM_ID4ME_LOGIN_FAILED'), 'error');
-			$this->app->redirect($returnUrl);
+			$this->app->redirect($options['redirect_url']);
 
 			return;
 		}
