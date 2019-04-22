@@ -92,6 +92,27 @@ class PlgSystemId4me extends CMSPlugin
 	);
 
 	/**
+	 * Constructor
+	 *
+	 * @param   object  &$subject  The object to observe
+	 * @param   array   $config    An array that holds the plugin configuration
+	 *
+	 * @since   1.5
+	 */
+	public function __construct(& $subject, $config)
+	{
+		parent::__construct($subject, $config);
+
+		$this->applicationType = 'native';
+
+		// When we are at locahost we need to set the application type to native
+		if (strpos(Uri::getInstance()->toString(), 'http://localhost/'))
+		{
+			$this->applicationType = 'native';
+		}
+	}
+
+	/**
 	 * Using this event we add our JaveScript and CSS code to add the id4me button to the login form.
 	 *
 	 * @return  void
@@ -107,12 +128,6 @@ class PlgSystemId4me extends CMSPlugin
 
 			// Load the layout with the JaveScript and CSS
 			echo $this->loadLayout('login');
-
-			// When we are at locahost we need to set the application type to native
-			if (strpos(Uri::getInstance()->toString(), 'http://localhost/'))
-			{
-				$this->applicationType = 'native';
-			}
 		}
 	}
 
@@ -137,10 +152,11 @@ class PlgSystemId4me extends CMSPlugin
 			return;
 		}
 
-		// Validate identifier:
-		$issuer = $this->getIssuerbyIdentifier($identifier);
+		// Get Issuer
+		$issuer = Uri::getInstance($this->getIssuerbyIdentifier($identifier));
+		$issuer->setScheme('https');
 
-		$issuerConfiguration  = $this->getOpenIdConfiguration(Uri::getInstance($issuer)->setScheme('https')->toString());
+		$issuerConfiguration  = $this->getOpenIdConfiguration($issuer->toString());
 		$registrationEndpoint = (string) $issuerConfiguration->get('registration_endpoint');
 		$registrationResult   = $this->registerService($registrationEndpoint);
 
@@ -173,15 +189,15 @@ class PlgSystemId4me extends CMSPlugin
 	 */
 	public function onAjaxID4MeLogin()
 	{
-		$issuerConfiguration = $this->getOpenIdConfiguration(
-			Uri::getInstance(
-				$this->getIssuerbyIdentifier(
-					$this->app->getUserState('id4me.identifier')
-				)
+		$issuer = Uri::getInstance(
+			$this->getIssuerbyIdentifier(
+				$this->app->getUserState('id4me.identifier')
 			)
-			->setScheme('https')
-			->toString()
 		);
+
+		$issuer->setScheme('https');
+		
+		$issuerConfiguration = $this->getOpenIdConfiguration($issuer->toString());
 
 		$bearerToken = $this->validateAuthTokens(
 			$this->getAuthTokens(
@@ -194,10 +210,23 @@ class PlgSystemId4me extends CMSPlugin
 
 		$joomlaUser = $this->getJoomlaUserById4MeIdentifier();
 
-		if ($joomlaUser instanceof \User)
+		if ($joomlaUser instanceof User)
 		{
+			// Load user plugins
+			PluginHelper::importPlugin('user');
+
+			if ($this->app->isClient('site'))
+			{
+				$options = array('action' => 'core.login.site');
+			}
+			
+			if ($this->app->isClient('administrator'))
+			{
+				$options = array('action' => 'core.login.site');
+			}
+
 			// OK, the credentials are authenticated and user is authorised. Let's fire the onLogin event.
-			$results = $this->app->triggerEvent('onUserLogin', array((array) $joomlaUser, array()));
+			$results = $this->app->triggerEvent('onUserLogin', array((array) $joomlaUser, $options));
 
 			/*
 			 * If any of the user plugins did not successfully complete the login routine
@@ -206,13 +235,6 @@ class PlgSystemId4me extends CMSPlugin
 			 * Any errors raised should be done in the plugin as this provides the ability
 			 * to provide much more information about why the routine may have failed.
 			 */
-			if ($results === false)
-			{
-				// We don't have an authorization URL so we can't do anything here.
-				$this->app->enqueueMessage(Text::_('PLG_SYSTEM_ID4ME_LOGIN_FAILED'), 'error');
-				$this->app->redirect('index.php');
-			}
-
 			if (in_array(false, $results, true) == false)
 			{
 				$options['user'] = Factory::getUser();
@@ -220,7 +242,13 @@ class PlgSystemId4me extends CMSPlugin
 
 				// The user is successfully logged in. Run the after login events
 				$this->app->triggerEvent('onUserAfterLogin', array($options));
+
+				return;
 			}
+
+			// We don't have an authorization URL so we can't do anything here.
+			$this->app->enqueueMessage(Text::_('PLG_SYSTEM_ID4ME_LOGIN_FAILED'), 'error');
+			$this->app->redirect('index.php');
 
 			return;
 		}
@@ -757,10 +785,11 @@ class PlgSystemId4me extends CMSPlugin
 	 */
 	protected function getValidateUrl()
 	{
-		return Uri::getInstance()
-			->setQuery(self::$redirectValidateUrl)
-			->setScheme($this->applicationType === 'web' ? 'https' : 'http')
-			->toString();
+		$validateUrl = Uri::getInstance();
+		$validateUrl->setQuery(self::$redirectValidateUrl);
+		$validateUrl->setScheme($this->applicationType === 'web' ? 'https' : 'http');
+
+		return $validateUrl->toString();
 	}
 
 	/**
