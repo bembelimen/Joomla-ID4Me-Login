@@ -48,6 +48,14 @@ class PlgSystemId4me extends CMSPlugin
 	protected $app;
 
 	/**
+	 * Database object.
+	 *
+	 * @var    DatabaseDriver
+	 * @since  3.8.0
+	 */
+	protected $db;
+
+	/**
 	 * The type of application we are runnig. We only use `native` when we are on localhost; Default is `web`
 	 *
 	 * @var    string
@@ -132,14 +140,13 @@ class PlgSystemId4me extends CMSPlugin
 		// Validate identifier:
 		$issuer = $this->getIssuerbyIdentifier($identifier);
 
-		$issuerConfiguration = $this->getOpenIdConfiguration(Uri::getInstance($issuer)->setScheme('https')->toString());
-
+		$issuerConfiguration  = $this->getOpenIdConfiguration(Uri::getInstance($issuer)->setScheme('https')->toString());
 		$registrationEndpoint = (string) $issuerConfiguration->get('registration_endpoint');
-		$registrationResult = $this->registerService($registrationEndpoint);
+		$registrationResult   = $this->registerService($registrationEndpoint);
 
-		$clientId = $registrationResult->get('client_id');
+		$clientId     = $registrationResult->get('client_id');
 		$clientSecret = $registrationResult->get('client_secret');
-		$state = UserHelper::genRandomPassword(100);
+		$state        = UserHelper::genRandomPassword(100);
 
 		$this->app->setUserState('id4me.client_id', $clientId);
 		$this->app->setUserState('id4me.client_secret', $clientSecret);
@@ -260,7 +267,7 @@ class PlgSystemId4me extends CMSPlugin
 			<form>
 				<fieldset name="id4me" label="PLG_SYSTEM_ID4ME_FIELDSET_LABEL">
 					<field
-						name="id4meIdentifier"
+						name="id4me-identifier"
 						type="text"
 						label="PLG_SYSTEM_ID4ME_IDENTIFIER_LABEL"
 						description="PLG_SYSTEM_ID4ME_IDENTIFIER_DESC"
@@ -284,15 +291,15 @@ class PlgSystemId4me extends CMSPlugin
 	 */
 	public function onUserBeforeSave($user, $isnew, $data)
 	{
-		$identifier = $data['id4me']['id4meIdentifier'];
+		$identifier = $data['id4me-identifier'];
 		
 		if (!empty($identifier))
 		{
 			$query = $this->db->getQuery(true)
 				->select($this->db->quoteName(['profile_value']))
 				->from('#__user_profiles')
-				->where($this->db->quoteName('user_id') . ' <> ' . (int) $user->id)
-				->where($this->db->quoteName('profile_key') . ' = ' . $db->quote('id4me.identifier'));
+				->where($this->db->quoteName('user_id') . ' <> ' . (int) $data['id'])
+				->where($this->db->quoteName('profile_key') . ' = ' . $this->db->quote('id4me.identifier'));
 
 			$this->db->setQuery($query);
 
@@ -337,17 +344,17 @@ class PlgSystemId4me extends CMSPlugin
 	public function onUserAfterSave($data, $isNew, $result, $error)
 	{
 		$userId     = ArrayHelper::getValue($data, 'id', 0, 'int');
-		$identifier = $data['id4me']['id4meIdentifier'];
+		$identifier = $data['id4me-identifier'];
 
-		$query = $db->getQuery(true)
-			->delete($db->quoteName('#__user_profiles'))
-			->where($db->quoteName('user_id') . ' = ' . (int) $userId)
-			->where($db->quoteName('profile_key') . ' = ' . $db->quote('id4me.identifier'));
-		$db->setQuery($query);
+		$query = $this->db->getQuery(true)
+			->delete($this->db->quoteName('#__user_profiles'))
+			->where($this->db->quoteName('user_id') . ' = ' . (int) $userId)
+			->where($this->db->quoteName('profile_key') . ' = ' . $this->db->quote('id4me.identifier'));
+		$this->db->setQuery($query);
 
 		try
 		{
-			$db->execute();
+			$this->db->execute();
 		}
 		catch (\RuntimeException $e)
 		{
@@ -356,15 +363,15 @@ class PlgSystemId4me extends CMSPlugin
 			return false;
 		}
 
-		$query = $db->getQuery(true)
-			->insert($db->quoteName('#__user_profiles'))
-			->columns($db->quoteName(array('user_id', 'profile_key', 'profile_value', 'ordering')))
-			->values(implode(',', array($userId, $db->quote('id4me.identifier'), $db->quote($identifier), 1)));
-		$db->setQuery($query);
+		$query = $this->db->getQuery(true)
+			->insert($this->db->quoteName('#__user_profiles'))
+			->columns($this->db->quoteName(array('user_id', 'profile_key', 'profile_value', 'ordering')))
+			->values(implode(',', array($userId, $this->db->quote('id4me.identifier'), $this->db->quote($identifier), 1)));
+		$this->db->setQuery($query);
 
 		try
 		{
-			$db->execute();
+			$this->db->execute();
 		}
 		catch (\RuntimeException $e)
 		{
@@ -386,10 +393,10 @@ class PlgSystemId4me extends CMSPlugin
 	protected function getJoomlaUserById4MeIdentifier()
 	{
 		$query = $this->db->getQuery(true)
-		->select($this->db->quoteName(['user_id']))
-		->from('#__user_profiles')
-		->where($this->db->quoteName('profile_value') . ' = ' . $this->app->getUserState('id4me.identifier'))
-		->where($this->db->quoteName('profile_key') . ' = ' . $db->quote('id4me.identifier'));
+			->select($this->db->quoteName(['user_id']))
+			->from('#__user_profiles')
+			->where($this->db->quoteName('profile_value') . ' = ' . $this->app->getUserState('id4me.identifier'))
+			->where($this->db->quoteName('profile_key') . ' = ' . $this->db->quote('id4me.identifier'));
 
 		$this->db->setQuery($query);
 
