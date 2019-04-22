@@ -9,17 +9,20 @@
 
 defined('_JEXEC') or die;
 
+use Joomla\CMS\Component\ComponentHelper;
+use Joomla\CMS\Factory;
+use Joomla\CMS\Http\HttpFactory;
+use Joomla\CMS\Language\Text;
 use Joomla\CMS\Plugin\CMSPlugin;
 use Joomla\CMS\Plugin\PluginHelper;
+use Joomla\CMS\Router\Route;
+use Joomla\CMS\Session\Session;
 use Joomla\CMS\Uri\Uri;
+use Joomla\CMS\User\User;
+use Joomla\CMS\User\UserHelper;
 use Joomla\Registry\Registry;
 use Joomla\String\StringHelper;
-use Joomla\CMS\Language\Text;
-use Joomla\CMS\Http\HttpFactory;
-use Joomla\CMS\Router\Route;
-use Joomla\CMS\Factory;
-use Joomla\CMS\Session\Session;
-use Joomla\CMS\User\UserHelper;
+use Joomla\Utilities\ArrayHelper;
 
 /**
  * Plugin class for ID4me
@@ -69,6 +72,18 @@ class PlgSystemId4me extends CMSPlugin
 	protected $formActionLoginUrl = 'index.php?option=com_ajax&plugin=ID4MePrepare&format=raw';
 
 	/**
+	 * The user edit form contexts
+	 *
+	 * @var    array
+	 * @since  1.0.0
+	 */
+	protected $supportedContext = array(
+		'com_users.profile',
+		'com_users.user',
+		'com_admin.profile',
+	);
+
+	/**
 	 * Using this event we add our JaveScript and CSS code to add the id4me button to the login form.
 	 *
 	 * @return  void
@@ -103,8 +118,16 @@ class PlgSystemId4me extends CMSPlugin
 	public function onAjaxID4MePrepare()
 	{
 		$identifier = $this->app->input->getString('id4me-identifier');
-
 		$this->app->setUserState('id4me.identifier', $identifier);
+
+		if ($this->getJoomlaUserById4MeIdentifier() === false && $this->getId4MeRegistrationEnabled() === false)
+		{
+			// We don't have an user associated to this identifier and we don't allow registration.
+			$this->app->enqueueMessage(Text::sprintf('PLG_SYSTEM_ID4ME_NO_JOOMLA_USER_FOR_IDENTIFIER', $identifier), 'error');
+			$this->app->redirect('index.php');
+
+			return;
+		}
 
 		// Validate identifier:
 		$issuer = $this->getIssuerbyIdentifier($identifier);
@@ -162,8 +185,20 @@ class PlgSystemId4me extends CMSPlugin
 			)
 		);
 
-		$claims = $this->getClaims($issuerConfiguration->get('userinfo_endpoint'), $bearerToken);
+		$joomlaUser = $this->getJoomlaUserById4MeIdentifier();
 
+		if ($joomlaUser instanceof \User)
+		{
+			// We have a valid user lets log this user in.
+
+			return;
+		}
+
+		// The user does not exists than lets register him
+		if ($this->getId4MeRegistrationEnabled())
+		{
+			$claims = $this->getClaims($issuerConfiguration->get('userinfo_endpoint'), $bearerToken);
+		}
 	}
 
 	/**
@@ -177,6 +212,225 @@ class PlgSystemId4me extends CMSPlugin
 	protected function dieHard()
 	{
 		throw new RuntimeException(Text::_('JLIB_APPLICATION_ERROR_ACCESS_FORBIDDEN'));
+	}
+
+	/**
+	 * Add id4me field to the user
+	 *
+	 * @param   JForm  $form  The form to be altered.
+	 * @param   mixed  $data  The associated data for the form.
+	 *
+	 * @return  boolean
+	 *
+	 * @since   1.0.0
+	 */
+	public function onContentPrepareForm(JForm $form, $data)
+	{
+		// Check for the user edit forms
+		if (!in_array($form->getName(), $this->supportedContext))
+		{
+			return true;
+		}
+
+		$form->load('
+			<form>
+				<fieldset name="id4me">
+					<field
+						name="id4meIdentifier"
+						type="text"
+						label="PLG_SYSTEM_ID4ME_IDENTIFIER_LABEL"
+						description="PLG_SYSTEM_ID4ME_IDENTIFIER_DESC"
+					</field>
+				</fieldset>
+			</form>'
+		);
+	}
+
+	/**
+	 * Method is called before user data is stored in the database
+	 *
+	 * @param   array    $user   Holds the old user data.
+	 * @param   boolean  $isnew  True if a new user is stored.
+	 * @param   array    $data   Holds the new user data.
+	 *
+	 * @return  boolean
+	 * @throws  InvalidArgumentException When the ID4me Identifier is already assigned to another user.
+	 *
+	 * @since   1.0.0
+	 */
+	public function onUserBeforeSave($user, $isnew, $data)
+	{
+		$identifier = $data['id4me']['id4meIdentifier'];
+		
+		if (!empty($identifier))
+		{
+			$query = $this->db->getQuery(true)
+				->select($this->db->quoteName(['profile_value']))
+				->from('#__user_profiles')
+				->where($this->db->quoteName('user_id') . ' <> ' . (int) $user->id)
+				->where($this->db->quoteName('profile_key') . ' = ' . $db->quote('id4me.identifier'));
+
+			$this->db->setQuery($query);
+
+			try
+			{
+				$rows = (array) $this->db->loadObjectList();
+			}
+			catch (\RuntimeException $e)
+			{
+				$this->app->enqueueMessage(Text::_('JERROR_AN_ERROR_HAS_OCCURRED'), 'error');
+
+				return false;
+			}
+
+			foreach ($rows as $row)
+			{
+				if ($row->profile_value === $identifier)
+				{
+					// The identifier is already used
+					throw new InvalidArgumentException(Text::sprintf('PLG_SYSTEM_ID4ME_IDENTIFIER_ALREADY_USED', $identifier));
+
+					return false;
+				}
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Saves user id4me data
+	 *
+	 * @param   array    $data    entered user data
+	 * @param   boolean  $isNew   true if this is a new user
+	 * @param   boolean  $result  true if saving the user worked
+	 * @param   string   $error   error message
+	 *
+	 * @return  boolean
+	 *
+	 *  @since   1.0.0
+	 */
+	public function onUserAfterSave($data, $isNew, $result, $error)
+	{
+		$userId     = ArrayHelper::getValue($data, 'id', 0, 'int');
+		$identifier = $data['id4me']['id4meIdentifier'];
+
+		$query = $db->getQuery(true)
+			->delete($db->quoteName('#__user_profiles'))
+			->where($db->quoteName('user_id') . ' = ' . (int) $userId)
+			->where($db->quoteName('profile_key') . ' = ' . $db->quote('id4me.identifier'));
+		$db->setQuery($query);
+
+		try
+		{
+			$db->execute();
+		}
+		catch (\RuntimeException $e)
+		{
+			$this->app->enqueueMessage(Text::_('JERROR_AN_ERROR_HAS_OCCURRED'), 'error');
+
+			return false;
+		}
+
+		$query = $db->getQuery(true)
+			->insert($db->quoteName('#__user_profiles'))
+			->columns($db->quoteName(array('user_id', 'profile_key', 'profile_value', 'ordering')))
+			->values(implode(',', array($userId, $db->quote('id4me.identifier'), $db->quote($identifier), 1)));
+		$db->setQuery($query);
+
+		try
+		{
+			$db->execute();
+		}
+		catch (\RuntimeException $e)
+		{
+			$this->app->enqueueMessage(Text::_('JERROR_AN_ERROR_HAS_OCCURRED'), 'error');
+
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Get the Joomla User by Id4Me Identifier
+	 *
+	 * @return  mixed  Returns the Joomla User for the Id4Me Identifier or false in case there is no user associated 
+	 *
+	 * @since   1.0.0
+	 */
+	protected function getJoomlaUserById4MeIdentifier()
+	{
+		$query = $this->db->getQuery(true)
+		->select($this->db->quoteName(['user_id']))
+		->from('#__user_profiles')
+		->where($this->db->quoteName('profile_value') . ' = ' . $this->app->getUserState('id4me.identifier'))
+		->where($this->db->quoteName('profile_key') . ' = ' . $db->quote('id4me.identifier'));
+
+		$this->db->setQuery($query);
+
+		try
+		{
+			$rows = (array) $this->db->loadColumn();
+		}
+		catch (\RuntimeException $e)
+		{
+			$this->app->enqueueMessage(Text::_('JERROR_AN_ERROR_HAS_OCCURRED'), 'error');
+
+			return false;
+		}
+
+		if (count($rows) > 1)
+		{
+			// For some reason we have more than one result this is an critial error
+			$this->app->enqueueMessage(Text::_('PLG_SYSTEM_ID4ME_IDENTIFIER_NOT_AMBIGOUOUS'), 'error');
+
+			return false;
+		}
+
+		try
+		{
+			$userId = (array) $this->db->loadResult();
+		}
+		catch (\RuntimeException $e)
+		{
+			$this->app->enqueueMessage(Text::_('JERROR_AN_ERROR_HAS_OCCURRED'), 'error');
+
+			return false;
+		}
+			
+		return Factory::getUser($userId);
+	}
+
+	/**
+	 * Check if the id4me registation is allowed or not
+	 *
+	 * @return  bool  True if the registration is enabeld false in other cases
+	 *
+	 * @since   1.0.0
+	 */
+	protected function getId4MeRegistrationEnabled()
+	{
+		// Get the global value as boolean
+		$comUsersRegistation = (bool) ComponentHelper::getParams('com_users')->get('allowUserRegistration', 0);
+
+		// Get the plugin configuration
+		$id4MeRegistation = $this->params->get('allow_registration', '');
+
+		// We are in `Use Global` mode so lets return the global setting
+		if (empty($id4MeRegistation))
+		{
+			return $comUsersRegistation;
+		}
+
+		// Id4Me registration is enabled and the global setting too.
+		if ($id4MeRegistation === '1' || $comUsersRegistation)
+		{
+			return true;
+		}
+
+		// In all other cases we don't enable registration
+		return false;
 	}
 
 	/**

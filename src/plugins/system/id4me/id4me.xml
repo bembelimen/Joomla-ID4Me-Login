@@ -34,6 +34,7 @@
 					description="PLG_SYSTEM_ID4ME_FIELD_ALLOW_REGISTRATION_DESC"
 					default=""
 					filter="integer"
+					validate="options"
 					class="btn-group btn-group-yesno"
 				>
 					<option value="">JGLOBAL_USE_GLOBAL</option>
