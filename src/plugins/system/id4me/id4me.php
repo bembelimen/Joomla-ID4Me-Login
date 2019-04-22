@@ -214,14 +214,20 @@ class PlgSystemId4me extends CMSPlugin
 			// Load user plugins
 			PluginHelper::importPlugin('user');
 
+			// Login options
+			$options = array(
+				'autoregister' => false,
+				'remember'     => false,
+			);
+
 			if ($this->app->isClient('site'))
 			{
-				$options = array('action' => 'core.login.site');
+				$options['action'] = 'core.login.site';
 			}
 			
 			if ($this->app->isClient('administrator'))
 			{
-				$options = array('action' => 'core.login.admin');
+				$options['action'] = 'core.login.admin';
 			}
 
 			// OK, the credentials are authenticated and user is authorised. Let's fire the onLogin event.
