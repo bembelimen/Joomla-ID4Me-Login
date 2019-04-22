@@ -103,10 +103,9 @@ class PlgSystemId4me extends CMSPlugin
 	{
 		parent::__construct($subject, $config);
 
-		$this->applicationType = 'native';
-
 		// When we are at locahost we need to set the application type to native
-		if (strpos(Uri::getInstance()->toString(), 'http://localhost/'))
+		if (substr(Uri::getInstance()->toString(), 0, 17) === 'http://localhost/' 
+			|| substr(Uri::getInstance()->toString(), 0, 18) === 'https://localhost/')
 		{
 			$this->applicationType = 'native';
 		}
@@ -222,7 +221,7 @@ class PlgSystemId4me extends CMSPlugin
 			
 			if ($this->app->isClient('administrator'))
 			{
-				$options = array('action' => 'core.login.site');
+				$options = array('action' => 'core.login.admin');
 			}
 
 			// OK, the credentials are authenticated and user is authorised. Let's fire the onLogin event.
