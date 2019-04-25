@@ -558,9 +558,19 @@ class PlgSystemId4me extends CMSPlugin
 			'Authorization' => 'Bearer ' . $token
 		];
 
-		$claimResult = HttpFactory::getHttp()->get($userinfoEndpoint, $headers);
+		try
+		{
+			$claimResult = HttpFactory::getHttp()->get(
+				$userinfoEndpoint,
+				$headers
+			);
+		}
+		catch (\RuntimeException $e)
+		{
+			$claimResult = NULL;
+		}
 
-		if (empty($claimResult->body) || $claimResult->code != '200')
+		if ($claimResult === NULL || empty($claimResult->body) || $claimResult->code != '200')
 		{
 			$this->dieHard();
 		}
@@ -632,9 +642,19 @@ class PlgSystemId4me extends CMSPlugin
 			'Authorization' => 'Bearer ' . $token
 		];
 
-		$claimResult = HttpFactory::getHttp()->get($endpoint, $headers);
+		try
+		{
+			$claimResult = HttpFactory::getHttp()->get(
+				$endpoint,
+				$headers
+			);
+		}
+		catch (\RuntimeException $e)
+		{
+			$claimResult = NULL;
+		}
 
-		if (empty($claimResult->body) || $claimResult->code != '200')
+		if ($claimResult === NULL || empty($claimResult->body) || $claimResult->code != '200')
 		{
 			$this->dieHard();
 		}
@@ -674,20 +694,31 @@ class PlgSystemId4me extends CMSPlugin
 	{
 		$authTokenRequest = http_build_query(
 			[
-				'grant_type' => 'authorization_code',
-				'code' => $code,
+				'grant_type'   => 'authorization_code',
+				'code'         => $code,
 				'redirect_uri' => $this->getValidateUrl(),
 			]
 		);
 
 		$headers = [
-			'Content-Type' => 'application/x-www-form-urlencoded',
+			'Content-Type'  => 'application/x-www-form-urlencoded',
 			'Authorization' => 'Basic ' . base64_encode($clientId . ':' . $clientSecret)
 		];
 
-		$tokenResult = HttpFactory::getHttp()->post($tokenEndpoint, $authTokenRequest, $headers);
+		try
+		{
+			$tokenResult = HttpFactory::getHttp()->post(
+				$tokenEndpoint,
+				$authTokenRequest,
+				$headers
+			);
+		}
+		catch (\RuntimeException $e)
+		{
+			$tokenResult = NULL;
+		}
 
-		if (empty($tokenResult->body) || $tokenResult->code != '200')
+		if ($tokenResult === NULL || empty($tokenResult->body) || $tokenResult->code != '200')
 		{
 			$this->dieHard();
 		}
@@ -776,14 +807,28 @@ class PlgSystemId4me extends CMSPlugin
 	 */
 	protected function getUserInfoClaims($claimsSupported)
 	{
+
+		// Check supported claims && only request user info in case we enforce userinfo update (new option) and in case we register a new user
+
 		return json_encode([
 			'userinfo' => [
-				'given_name' => ['essential' => true, 'reason' => Text::_('PLG_SYSTEM_ID4ME_CLAIM_REASON_GIVEN_NAME')],
-				'email' => ['essential' => true, 'reason' => Text::_('PLG_SYSTEM_ID4ME_CLAIM_REASON_EMAIL')],
-				'email_verified' => ['essential' => true, 'reason' => Text::_('PLG_SYSTEM_ID4ME_CLAIM_REASON_EMAILVERIFIED')],
+				'given_name'     => [
+					'essential' => true,
+					'reason'    => Text::_('PLG_SYSTEM_ID4ME_CLAIM_REASON_GIVEN_NAME')
+				],
+				'email'          => [
+					'essential' => true,
+					'reason'    => Text::_('PLG_SYSTEM_ID4ME_CLAIM_REASON_EMAIL')
+				],
+				'email_verified' => [
+					'essential' => true,
+					'reason'    => Text::_('PLG_SYSTEM_ID4ME_CLAIM_REASON_EMAILVERIFIED')
+				],
 			],
 			'id_token' => [
-				'auth_time' => ['essential' => true],
+				'auth_time' => [
+					'essential' => true
+				],
 			]
 		]);
 	}
@@ -821,13 +866,20 @@ class PlgSystemId4me extends CMSPlugin
 			'redirect_uris'    => [$this->getValidateUrl()],
 		]);
 
-		$registrationResult = HttpFactory::getHttp()->post(
-			$registrationEndpoint,
-			$registrationDataJSON,
-			['Content-Type' => 'application/json']
-		);
+		try
+		{
+			$registrationResult = HttpFactory::getHttp()->post(
+				$registrationEndpoint,
+				$registrationDataJSON,
+				['Content-Type' => 'application/json']
+			);
+		}
+		catch (\RuntimeException $e)
+		{
+			$registrationResult = NULL;
+		}
 
-		if (empty($registrationResult->body) || !in_array($registrationResult->code, ['200', '201']))
+		if ($registrationResult === NULL || empty($registrationResult->body) || !in_array($registrationResult->code, ['200', '201']))
 		{
 			$this->dieHard();
 		}
@@ -840,14 +892,14 @@ class PlgSystemId4me extends CMSPlugin
 	 *
 	 * @param   string  $hostname  The identifier/Domain of the user to authenticate
 	 *
-	 * @return  string  Issuer URL
+	 * @return  string  Issuer URL or false on error
 	 *
 	 * @since  1.0.0
 	 */
 	private function getIssuerbyHostname($hostname)
 	{
 		$hostname = '_openid.' . $hostname;
-		$records = dns_get_record($hostname, DNS_TXT);
+		$records  = dns_get_record($hostname, DNS_TXT);
 
 		if (empty($records) || !is_array($records))
 		{
@@ -870,7 +922,7 @@ class PlgSystemId4me extends CMSPlugin
 			}
 		}
 
-		$this->dieHard();
+		return false;
 	}
 
 	/**
@@ -906,6 +958,8 @@ class PlgSystemId4me extends CMSPlugin
 		}
 		while ($i <= $totalCountOfHostparts);
 
+		// We have not found any issuer URL -> exit
+		// @todo return false and handle it with an more friendly message
 		$this->dieHard();
 	}
 
@@ -920,11 +974,19 @@ class PlgSystemId4me extends CMSPlugin
 	 */
 	protected function getOpenIdConfiguration($issuer)
 	{
-		$openIdConfiguration = HttpFactory::getHttp()->get(
-			$issuer . '/.well-known/openid-configuration'
-		);
+		try
+		{
+			$openIdConfiguration = HttpFactory::getHttp()->get(
+				$issuer . '/.well-known/openid-configuration'
+			);
+		
+		}
+		catch (\RuntimeException $e)
+		{
+			$openIdConfiguration = NULL;
+		}
 
-		if (empty($openIdConfiguration->body) || $openIdConfiguration->code != '200')
+		if ($openIdConfiguration === NULL || empty($openIdConfiguration->body) || $openIdConfiguration->code != '200')
 		{
 			$this->dieHard();
 		}
