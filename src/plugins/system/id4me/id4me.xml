@@ -41,6 +41,20 @@
 					<option value="1">JYES</option>
 					<option value="0">JNO</option>
 				</field>
+				<field
+					name="allowed_login_client"
+					type="list"
+					label="PLG_SYSTEM_ID4ME_FIELD_ALLOWED_LOGIN_CLIENT_LABEL"
+					description="PLG_SYSTEM_ID4ME_FIELD_ALLOWED_LOGIN_CLIENT_DESC"
+					default="site"
+					filter="integer"
+					validate="options"
+					class="btn-group btn-group-yesno"
+				>
+					<option value="both">PLG_SYSTEM_ID4ME_FIELD_ALLOWED_LOGIN_CLIENT_BOTH</option>
+					<option value="site">JSITE</option>
+					<option value="administrator">JADMINISTRATOR</option>
+				</field>
 			</fieldset>
 		</fields>
 	</config>

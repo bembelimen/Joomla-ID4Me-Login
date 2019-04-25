@@ -120,8 +120,9 @@ class PlgSystemId4me extends CMSPlugin
 	 */
 	public function onBeforeRender()
 	{
-		if (($this->app->isClient('site')
-			|| ($this->app->isClient('administrator') && Factory::getUser()->guest))
+		$allowedLoginClient = $this->params->get('allowed_login_client', 'site');
+
+		if ((($allowedLoginClient === 'both' || $this->app->isClient($allowedLoginClient)) && Factory::getUser()->guest)
 			&& (NULL === $this->app->getUserState('id4me.identifier')))
 		{
 			// Load the language string
