@@ -120,7 +120,7 @@ class PlgSystemId4me extends CMSPlugin
 	 */
 	public function onBeforeRender()
 	{
-		$allowedLoginClient = $this->params->get('allowed_login_client', 'site');
+		$allowedLoginClient = (string) $this->params->get('allowed_login_client', 'site');
 
 		if ((($allowedLoginClient === 'both' || $this->app->isClient($allowedLoginClient)) && Factory::getUser()->guest)
 			&& (NULL === $this->app->getUserState('id4me.identifier')))
@@ -155,7 +155,19 @@ class PlgSystemId4me extends CMSPlugin
 		}
 
 		// Get the client form the current URL
-		$this->app->setUserState('id4me.client', Uri::getInstance()->getVar('client'));
+		$requestedLoginClient = (string) Uri::getInstance()->getVar('client');
+		$allowedLoginClient   = (string) $this->params->get('allowed_login_client', 'site');
+
+		if ($allowedLoginClient != 'both' && $allowedLoginClient != $requestedLoginClient)
+		{
+			// We don't allow ID4e login to this client.
+			$this->app->enqueueMessage(Text::sprintf('PLG_SYSTEM_ID4ME_NO_LOGIN_CLIENT', $requestedLoginClient), 'error');
+			$this->app->redirect('index.php');
+
+			return;
+		}
+
+		$this->app->setUserState('id4me.client', $requestedLoginClient);
 
 		// Get Issuer
 		$issuer = Uri::getInstance($this->getIssuerbyIdentifier($identifier));
