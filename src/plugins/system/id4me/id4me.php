@@ -828,22 +828,34 @@ class PlgSystemId4me extends CMSPlugin
 	{
 
 		// Check supported claims && only request user info in case we enforce userinfo update (new option) and in case we register a new user
+		// The user does not exists than lets register him
+		if ($this->getId4MeRegistrationEnabled())
+		{
+			return json_encode([
+				'userinfo' => [
+					'given_name'     => [
+						'essential' => true,
+						'reason'    => Text::_('PLG_SYSTEM_ID4ME_CLAIM_REASON_GIVEN_NAME')
+					],
+					'email'          => [
+						'essential' => true,
+						'reason'    => Text::_('PLG_SYSTEM_ID4ME_CLAIM_REASON_EMAIL')
+					],
+					'email_verified' => [
+						'essential' => true,
+						'reason'    => Text::_('PLG_SYSTEM_ID4ME_CLAIM_REASON_EMAILVERIFIED')
+					],
+				],
+				'id_token' => [
+					'auth_time' => [
+						'essential' => true
+					],
+				]
+			]);
+		}
 
+		// We only request the auth token when we don't plan to use the claims
 		return json_encode([
-			'userinfo' => [
-				'given_name'     => [
-					'essential' => true,
-					'reason'    => Text::_('PLG_SYSTEM_ID4ME_CLAIM_REASON_GIVEN_NAME')
-				],
-				'email'          => [
-					'essential' => true,
-					'reason'    => Text::_('PLG_SYSTEM_ID4ME_CLAIM_REASON_EMAIL')
-				],
-				'email_verified' => [
-					'essential' => true,
-					'reason'    => Text::_('PLG_SYSTEM_ID4ME_CLAIM_REASON_EMAILVERIFIED')
-				],
-			],
 			'id_token' => [
 				'auth_time' => [
 					'essential' => true
