@@ -122,6 +122,9 @@ class PlgSystemId4me extends CMSPlugin
 	{
 		$allowedLoginClient = (string) $this->params->get('allowed_login_client', 'site');
 
+		// For now we hardcode site as only solution that is working
+		$allowedLoginClient = 'site';
+
 		if ((($allowedLoginClient === 'both' || $this->app->isClient($allowedLoginClient)) && Factory::getUser()->guest)
 			&& (NULL === $this->app->getUserState('id4me.identifier')))
 		{
