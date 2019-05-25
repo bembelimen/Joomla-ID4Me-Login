@@ -160,7 +160,7 @@ class PlgSystemId4me extends CMSPlugin
 
 		if ($allowedLoginClient != 'both' && $allowedLoginClient != $requestedLoginClient)
 		{
-			// We don't allow ID4e login to this client.
+			// We don't allow ID4me login to this client.
 			$this->app->enqueueMessage(Text::sprintf('PLG_SYSTEM_ID4ME_NO_LOGIN_CLIENT', $requestedLoginClient), 'error');
 			$this->app->redirect('index.php');
 
