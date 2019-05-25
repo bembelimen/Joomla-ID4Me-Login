@@ -531,6 +531,9 @@ class PlgSystemId4me extends CMSPlugin
 	 */
 	protected function getId4MeRegistrationEnabled()
 	{
+		// For now this feature is not fully implemented and therefor we return false here!
+		return false;
+
 		// Get the global value as boolean
 		$comUsersRegistation = (bool) ComponentHelper::getParams('com_users')->get('allowUserRegistration', 0);
 
