@@ -1,0 +1,9 @@
+version: '3'
+services:
+  app:
+    build: .
+    volumes:
+      - .:/usr/local/share/id4me
+    ports:
+      - "7000:80"
+

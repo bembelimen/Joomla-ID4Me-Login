@@ -1,0 +1,11 @@
+vendor
+unused
+.idea
+.settings
+keys
+.history
+.phpunit.result.cache
+.DS_Store
+composer.lock
+/.project
+/log
