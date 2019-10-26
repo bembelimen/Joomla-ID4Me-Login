@@ -18,15 +18,20 @@ use Joomla\CMS\Installer\InstallerScript;
  */
 class PlgSystemId4meInstallerScript extends InstallerScript
 {
+
 	/**
-	 * Extension script constructor.
+	 * Minimum PHP version required to install the extension
 	 *
-	 * @since   1.0
+	 * @var    string
+	 * @since  3.6
 	 */
-	public function __construct()
-	{
-		// Define the minumum versions to be supported.
-		$this->minimumJoomla = '3.9';
-		$this->minimumPhp    = '7.0';
-	}
+	protected $minimumPhp = '7.0';
+
+	/**
+	 * Minimum Joomla! version required to install the extension
+	 *
+	 * @var    string
+	 * @since  3.6
+	 */
+	protected $minimumJoomla = '3.9';
 }
