@@ -1,0 +1,55 @@
+stages:
+  - test
+
+.composer_install: &composer_install |
+  apt-get update && apt-get install -qqy git && apt-get install -qqy unzip && apt-get autoclean
+  pecl install xdebug && docker-php-ext-enable xdebug
+  php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+  php -r "if (hash_file('sha384', 'composer-setup.php') === 'a5c698ffe4b8e849a443b120cd5ba38043260d5c4023dbf93e1558871f1f07f58274fc6f4c93bcfd858c6bd0775cd8d1') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;"
+  php composer-setup.php
+  php -r "unlink('composer-setup.php');"
+  php composer.phar install
+
+run_tests_70:
+  image: php:7.0
+  stage: test
+  before_script:
+    - *composer_install
+  script:
+    - vendor/bin/phpunit --coverage-text --config phpunit.xml
+
+run_tests_71:
+  image: php:7.1
+  stage: test
+  before_script:
+    - *composer_install
+  script:
+    - vendor/bin/phpunit --coverage-text --config phpunit.xml
+
+run_tests_72:
+  image: php:7.2
+  stage: test
+  before_script:
+    - *composer_install
+  script:
+    - vendor/bin/phpunit --coverage-text --config phpunit.xml
+  coverage: '/^\s*Lines:\s*\d+.\d+\%/'
+
+run_tests_73:
+  image: php:7.3
+  stage: test
+  before_script:
+    - *composer_install
+  script:
+    - vendor/bin/phpunit --coverage-text --config phpunit.xml
+
+run_cs:
+  image: php:7.3
+  stage: test
+  before_script:
+    - *composer_install
+  script:
+    - vendor/bin/phpcs --config-set default_standard PSR2
+    - vendor/bin/phpcs --config-set show_warnings 0
+    - vendor/bin/phpcs src/
+

@@ -13,6 +13,7 @@
 	<files>
 		<folder>language</folder>
 		<folder>tmpl</folder>
+		<folder>libraries</folder>
 		<filename plugin="id4me">id4me.php</filename>
 	</files>
 	<media destination="plg_system_id4me" folder="media">
