@@ -415,7 +415,7 @@ class PlgSystemId4me extends CMSPlugin
 
 			try
 			{
-				$rows = (int) $this->db->getNumRows();
+				$rowCount = (int) $this->db->getNumRows($this->db->execute());
 			}
 			catch (\RuntimeException $e)
 			{
@@ -424,15 +424,12 @@ class PlgSystemId4me extends CMSPlugin
 				return false;
 			}
 
-			foreach ($rows as $row)
+			if ($rowCount > 0)
 			{
-				if ($row->profile_value === $identifier)
-				{
-					// The identifier is already used
-					throw new InvalidArgumentException(Text::sprintf('PLG_SYSTEM_ID4ME_IDENTIFIER_ALREADY_USED', $identifier));
+				// The identifier is already used
+				throw new InvalidArgumentException(Text::sprintf('PLG_SYSTEM_ID4ME_IDENTIFIER_ALREADY_USED', $identifier));
 
-					return false;
-				}
+				return false;
 			}
 		}
 
@@ -522,10 +519,11 @@ class PlgSystemId4me extends CMSPlugin
 		$userInfo = $options['id4me.userinfo'];
 
 		$table->load($options['user']->id);
-		$table->email = $userInfo->getEmailVerified() ?: $userInfo->getEmail();
-		$table->name  = $userInfo->getName() ?: $userInfo->getGivenName() . ' ' . $userInfo->getFamilyName();
 
-		return $table->bind($table);
+		$data['email'] = $userInfo->getEmailVerified() ?: $userInfo->getEmail();
+		$data['name']  = $userInfo->getName() ?: $userInfo->getGivenName() . ' ' . $userInfo->getFamilyName();
+
+		return $table->save($data);
 	}
 	/**
 	 * Get the Joomla User by Id4Me Identifier
