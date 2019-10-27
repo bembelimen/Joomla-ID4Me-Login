@@ -51,8 +51,8 @@
 					validate="options"
 					class="btn-group btn-group-yesno"
 				>
-					<option value="1">JYES</option>
-					<option value="0">JNO</option>
+					<option value="1">JENABED</option>
+					<option value="0">JDISABLED</option>
 				</field>
 				<!-- <field
 					name="allowed_login_client"
