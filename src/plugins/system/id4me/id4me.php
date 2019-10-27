@@ -273,8 +273,13 @@ class PlgSystemId4me extends CMSPlugin
 				'remember'       => false,
 				'action'         => 'core.login.site',
 				'redirect_url'   => Route::_('index.php?Itemid=' . (int) $home->id, false),
-				'id4me.userinfo' => $userInfo,
 			];
+
+			// pass the user info in case we want them to be updated
+			if ($this->params->get('update_userinfo', 0) === 1)
+			{
+				$options['id4me.userinfo'] = $userInfo;
+			}
 
 			$returnUrl = 'index.php';
 
