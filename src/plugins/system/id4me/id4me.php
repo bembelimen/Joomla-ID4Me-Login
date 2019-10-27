@@ -409,7 +409,7 @@ class PlgSystemId4me extends CMSPlugin
 				->from('#__user_profiles')
 				->where($this->db->quoteName('user_id') . ' <> ' . (int) $data['id'])
 				->where($this->db->quoteName('profile_key') . ' = ' . $this->db->quote('id4me.identifier'))
-				->where($this->db->quoteName(['profile_value']) . ' = ' . $this->db->quote($identifier));
+				->where($this->db->quoteName('profile_value') . ' = ' . $this->db->quote($identifier));
 
 			$this->db->setQuery($query);
 
