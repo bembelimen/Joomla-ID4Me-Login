@@ -149,7 +149,7 @@ class PlgSystemId4me extends CMSPlugin
 	 */
 	public function onBeforeRender()
 	{
-		if ((($this->app->isClient('site')) && Factory::getUser()->guest))
+		if ($this->app->isClient('site') && Factory::getUser()->guest)
 		{
 			// Load the language string
 			Text::script('PLG_SYSTEM_ID4ME_IDENTIFIER_LABEL');
