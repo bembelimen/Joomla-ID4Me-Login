@@ -149,12 +149,7 @@ class PlgSystemId4me extends CMSPlugin
 	 */
 	public function onBeforeRender()
 	{
-		$allowedLoginClient = (string) $this->params->get('allowed_login_client', 'site');
-
-		// For now we hardcode site as only solution that is working
-		$allowedLoginClient = 'site';
-
-		if ((($allowedLoginClient === 'both' || $this->app->isClient($allowedLoginClient)) && Factory::getUser()->guest))
+		if ((($this->app->isClient('site')) && Factory::getUser()->guest))
 		{
 			// Load the language string
 			Text::script('PLG_SYSTEM_ID4ME_IDENTIFIER_LABEL');
@@ -189,9 +184,8 @@ class PlgSystemId4me extends CMSPlugin
 
 		// Get the client form the current URL
 		$requestedLoginClient = (string) Uri::getInstance()->getVar('client');
-		$allowedLoginClient   = (string) $this->params->get('allowed_login_client', 'site');
 
-		if ($allowedLoginClient != 'both' && $allowedLoginClient != $requestedLoginClient)
+		if ($requestedLoginClient != 'site')
 		{
 			// We don't allow ID4me login to this client.
 			$this->app->enqueueMessage(Text::sprintf('PLG_SYSTEM_ID4ME_NO_LOGIN_CLIENT', $requestedLoginClient), 'error');
