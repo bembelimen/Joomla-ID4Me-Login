@@ -491,6 +491,38 @@ class PlgSystemId4me extends CMSPlugin
 	}
 
 	/**
+	 * We update the UserInfos only when the auth is finished
+	 *
+	 * @param   array  $options  Array holding options
+	 *
+	 * @return  boolean  True on success
+	 *
+	 * @since   1.0.1
+	 */
+	public function onUserAfterLogin($options)
+	{
+		if (!isset($options['responseType']) || !$options['responseType'] === 'id4me')
+		{
+			// We are not in an id4me auth process
+			return true;
+		}
+
+		if (!isset($options['id4me.userinfo']))
+		{
+			// The user info has not been passed
+			return true;
+		}
+
+		$table    = Table::getInstance('User', 'JTable');
+		$userInfo = $options['id4me.userinfo'];
+
+		$table->load($options['user']->id);
+		$table->email = $userInfo->getEmailVerified() ?: $userInfo->getEmail();
+		$table->name  = $userInfo->getName() ?: $userInfo->getGivenName() . ' ' . $userInfo->getFamilyName();
+
+		return $table->bind($table);
+	}
+	/**
 	 * Get the Joomla User by Id4Me Identifier
 	 *
 	 * @return  mixed  Returns the Joomla User for the Id4Me Identifier or false in case there is no user associated
