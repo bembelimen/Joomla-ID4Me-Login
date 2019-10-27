@@ -54,7 +54,7 @@ class PlgSystemId4me extends CMSPlugin
 	 * Database object.
 	 *
 	 * @var    DatabaseDriver
-	 * @since  3.8.0
+	 * @since  1.0.0
 	 */
 	protected $db;
 
@@ -62,6 +62,7 @@ class PlgSystemId4me extends CMSPlugin
 	 * The ID4Me object
 	 *
 	 * @var type
+	 * @since  1.0.0
 	 */
 	protected static $id4me;
 
@@ -124,7 +125,9 @@ class PlgSystemId4me extends CMSPlugin
 	/**
 	 * Creates the ID4Me service
 	 *
-	 * @return Service
+	 * @return  Service
+	 *
+	 * @since   1.0.0
 	 */
 	protected function ID4MeHandler()
 	{
@@ -356,7 +359,7 @@ class PlgSystemId4me extends CMSPlugin
 	 *
 	 * @return  boolean
 	 *
-	 * @since   1.6
+	 * @since   1.0.0
 	 */
 	public function onContentPrepareData($context, $data)
 	{
@@ -369,7 +372,7 @@ class PlgSystemId4me extends CMSPlugin
 		$query = $this->db->getQuery(true)
 			->select($this->db->quoteName(['profile_value']))
 			->from('#__user_profiles')
-			->where($this->db->quoteName('user_id') . ' = ' . Factory::getUser()->id)
+			->where($this->db->quoteName('user_id') . ' = ' . $this->db->quote($data->id))
 			->where($this->db->quoteName('profile_key') . ' = ' . $this->db->quote('id4me.identifier'));
 
 		$this->db->setQuery($query);
@@ -533,18 +536,36 @@ class PlgSystemId4me extends CMSPlugin
 		return Factory::getUser($userId);
 	}
 
+	/**
+	 * Register the user as Joomla User with the data provided
+	 *
+	 * @param   UserInfo   $userInfo   The user Info result from the id4me API
+	 *
+	 * @return  User  Returns the newly created Joomla User or false in case there is an error
+	 *
+	 * @since   1.0.0
+	 */
 	protected function registerUser(UserInfo $userInfo)
 	{
 		$params = ComponentHelper::getParams('com_users');
 
 		$table = Table::getInstance('User', 'JTable');
 
+		if ($userInfo->getName())
+		{
+			$name = $userInfo->getName();
+		}
+		else
+		{
+			$name = $userInfo->getGivenName() . ' ' . $userInfo->getFamilyName();
+		}
+
 		$identifier = $this->app->getUserState('id4me.identifier');
 
 		$user = [
 			'username' => $identifier,
 			'email' => $userInfo->getEmailVerified() ?: $userInfo->getEmail(),
-			'name' => $userInfo->getName() ?: $userInfo->getGivenName() . ' ' . $userInfo->getFamilyName()
+			'name' => $name
 		];
 
 		$user['groups'] = [$params->get('new_usertype', $params->get('guest_usergroup', 1))];
