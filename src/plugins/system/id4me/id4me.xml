@@ -28,7 +28,7 @@
 	<config>
 		<fields name="params">
 			<fieldset name="basic">
-				<!-- <field
+				<field
 					name="allow_registration"
 					type="list"
 					label="PLG_SYSTEM_ID4ME_FIELD_ALLOW_REGISTRATION_LABEL"
@@ -41,8 +41,8 @@
 					<option value="">JGLOBAL_USE_GLOBAL</option>
 					<option value="1">JYES</option>
 					<option value="0">JNO</option>
-				</field> -->
-				<field
+				</field>
+				<!-- <field
 					name="allowed_login_client"
 					type="list"
 					label="PLG_SYSTEM_ID4ME_FIELD_ALLOWED_LOGIN_CLIENT_LABEL"
@@ -54,7 +54,7 @@
 					<option value="both">PLG_SYSTEM_ID4ME_FIELD_ALLOWED_LOGIN_CLIENT_BOTH</option>
 					<option value="site">JSITE</option>
 					<option value="administrator">JADMINISTRATOR</option>
-				</field>
+				</field> -->
 			</fieldset>
 		</fields>
 	</config>
