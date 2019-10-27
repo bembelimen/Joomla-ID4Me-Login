@@ -372,7 +372,7 @@ class PlgSystemId4me extends CMSPlugin
 		$query = $this->db->getQuery(true)
 			->select($this->db->quoteName(['profile_value']))
 			->from('#__user_profiles')
-			->where($this->db->quoteName('user_id') . ' = ' . $this->db->quote($data->id))
+			->where($this->db->quoteName('user_id') . ' = ' . Factory::getUser()->id)
 			->where($this->db->quoteName('profile_key') . ' = ' . $this->db->quote('id4me.identifier'));
 
 		$this->db->setQuery($query);
