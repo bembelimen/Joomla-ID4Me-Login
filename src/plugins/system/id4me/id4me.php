@@ -547,25 +547,14 @@ class PlgSystemId4me extends CMSPlugin
 	 */
 	protected function registerUser(UserInfo $userInfo)
 	{
-		$params = ComponentHelper::getParams('com_users');
-
-		$table = Table::getInstance('User', 'JTable');
-
-		if ($userInfo->getName())
-		{
-			$name = $userInfo->getName();
-		}
-		else
-		{
-			$name = $userInfo->getGivenName() . ' ' . $userInfo->getFamilyName();
-		}
-
+		$params     = ComponentHelper::getParams('com_users');
+		$table      = Table::getInstance('User', 'JTable');
 		$identifier = $this->app->getUserState('id4me.identifier');
 
 		$user = [
 			'username' => $identifier,
 			'email' => $userInfo->getEmailVerified() ?: $userInfo->getEmail(),
-			'name' => $name
+			'name' => $userInfo->getName() ?: $userInfo->getGivenName() . ' ' . $userInfo->getFamilyName()
 		];
 
 		$user['groups'] = [$params->get('new_usertype', $params->get('guest_usergroup', 1))];
