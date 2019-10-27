@@ -212,14 +212,35 @@ class PlgSystemId4me extends CMSPlugin
 		$this->app->setUserState('id4me.openIdConfig', $openIdConfig);
 		$this->app->setUserState('id4me.state', $state);
 
-		$authorizationUrl = $this->ID4MeHandler()->getAuthorizationUrl($openIdConfig, $client->getClientId(), $identifier, $client->getActiveRedirectUri(), $state, NULL,
-			new ClaimRequestList(
-			new ClaimRequest('given_name', true),
-				new ClaimRequest('family_name', true),
-				new ClaimRequest('name', true),
-				new ClaimRequest('email', true)
-			)
-		);
+		if ($joomlaUser instanceof User && $this->params->get('update_userinfo', 0) === 0)
+		{
+			// We have an user and we don't want to update the user Info. So we don't need to request the fields
+			$authorizationUrl = $this->ID4MeHandler()->getAuthorizationUrl(
+				$openIdConfig,
+				$client->getClientId(),
+				$identifier,
+				$client->getActiveRedirectUri(),
+				$state
+			);
+		}
+		else
+		{
+			// We don't have an user and are in register mode or we want to update the user info
+			$authorizationUrl = $this->ID4MeHandler()->getAuthorizationUrl(
+				$openIdConfig,
+				$client->getClientId(),
+				$identifier,
+				$client->getActiveRedirectUri(),
+				$state,
+				NULL,
+				new ClaimRequestList(
+				new ClaimRequest('given_name', true),
+					new ClaimRequest('family_name', true),
+					new ClaimRequest('name', true),
+					new ClaimRequest('email', true)
+				)
+			);
+		}
 
 		if (!$authorizationUrl)
 		{
@@ -275,7 +296,7 @@ class PlgSystemId4me extends CMSPlugin
 				'redirect_url'   => Route::_('index.php?Itemid=' . (int) $home->id, false),
 			];
 
-			// pass the user info in case we want them to be updated
+			// Pass the user info in case we want them to be updated
 			if ($this->params->get('update_userinfo', 0) === 1)
 			{
 				$options['id4me.userinfo'] = $userInfo;
