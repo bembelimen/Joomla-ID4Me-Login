@@ -203,25 +203,23 @@ class PlgSystemId4me extends CMSPlugin
 		$this->app->setUserState('id4me.client', $requestedLoginClient);
 
 		$authorityName = $this->ID4MeHandler()->discover($identifier);
-
 		$openIdConfig = $this->ID4MeHandler()->getOpenIdConfig($authorityName);
 
 		$client = $this->ID4MeHandler()->register($openIdConfig, $identifier, $this->getValidateUrl(), $this->applicationType);
-
-		$state        = UserHelper::genRandomPassword(100);
+		$state  = UserHelper::genRandomPassword(100);
 
 		$this->app->setUserState('id4me.clientInfo', (object) $client);
 		$this->app->setUserState('id4me.openIdConfig', $openIdConfig);
 		$this->app->setUserState('id4me.state', $state);
 
-        $authorizationUrl = $this->ID4MeHandler()->getAuthorizationUrl($openIdConfig, $client->getClientId(), $identifier, $client->getActiveRedirectUri(), $state, NULL,
-            new ClaimRequestList(
-                new ClaimRequest('given_name', true),
-                new ClaimRequest('family_name', true),
-                new ClaimRequest('name', true),
-                new ClaimRequest('email', true)
-            )
-        );
+		$authorizationUrl = $this->ID4MeHandler()->getAuthorizationUrl($openIdConfig, $client->getClientId(), $identifier, $client->getActiveRedirectUri(), $state, NULL,
+			new ClaimRequestList(
+			new ClaimRequest('given_name', true),
+				new ClaimRequest('family_name', true),
+				new ClaimRequest('name', true),
+				new ClaimRequest('email', true)
+			)
+		);
 
 		if (!$authorizationUrl)
 		{
@@ -251,9 +249,7 @@ class PlgSystemId4me extends CMSPlugin
 		$openIdConfig = unserialize(serialize($openIdConfig));
 
 		$authorizedAccessTokens = $this->ID4MeHandler()->getAuthorizationTokens($openIdConfig, $code, $client);
-
 		$userInfo = $this->ID4MeHandler()->getUserInfo($openIdConfig, $client, $authorizedAccessTokens);
-
 		$joomlaUser = $this->getJoomlaUserById4MeIdentifier();
 
 		// The user does not exists than lets register him
@@ -272,12 +268,13 @@ class PlgSystemId4me extends CMSPlugin
 			PluginHelper::importPlugin('user');
 
 			// Login options
-			$options = array(
-				'autoregister' => false,
-				'remember'     => false,
-				'action'       => 'core.login.site',
-				'redirect_url' => Route::_('index.php?Itemid=' . (int) $home->id, false),
-			);
+			$options = [
+				'autoregister'   => false,
+				'remember'       => false,
+				'action'         => 'core.login.site',
+				'redirect_url'   => Route::_('index.php?Itemid=' . (int) $home->id, false),
+				'id4me.userinfo' => $userInfo,
+			];
 
 			$returnUrl = 'index.php';
 
