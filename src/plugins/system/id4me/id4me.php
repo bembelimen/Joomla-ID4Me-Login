@@ -494,6 +494,48 @@ class PlgSystemId4me extends CMSPlugin
 	}
 
 	/**
+	 * Remove all user profile information for the given user ID
+	 *
+	 * Method is called after user data is deleted from the database
+	 *
+	 * @param   array    $user     Holds the user data
+	 * @param   boolean  $success  True if user was succesfully stored in the database
+	 * @param   string   $msg      Message
+	 *
+	 * @return  boolean
+	 */
+	public function onUserAfterDelete($user, $success, $msg)
+	{
+		if (!$success)
+		{
+			return false;
+		}
+
+		$userId = ArrayHelper::getValue($user, 'id', 0, 'int');
+
+		if ($userId)
+		{
+			try
+			{
+				$query = $this->db->getQuery(true)
+						->delete($this->db->quoteName('#__user_profiles'))
+						->where($this->db->quoteName('user_id') . ' = ' . (int) $userId)
+						->where($this->db->quoteName('profile_key') . ' = ' . $this->db->quote('id4me.identifier'));
+
+				$this->db->setQuery($query)->execute();
+			}
+			catch (Exception $e)
+			{
+				$this->_subject->setError($e->getMessage());
+
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
 	 * Get the Joomla User by Id4Me Identifier
 	 *
 	 * @return  mixed  Returns the Joomla User for the Id4Me Identifier or false in case there is no user associated
