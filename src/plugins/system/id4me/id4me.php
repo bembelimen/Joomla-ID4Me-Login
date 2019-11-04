@@ -545,10 +545,12 @@ class PlgSystemId4me extends CMSPlugin
 	protected function getJoomlaUserById4MeIdentifier()
 	{
 		$query = $this->db->getQuery(true)
-			->select($this->db->quoteName(['user_id']))
-			->from($this->db->quoteName('#__user_profiles'))
-			->where($this->db->quoteName('profile_value') . ' = ' . $this->db->quote($this->app->getUserState('id4me.identifier')))
-			->where($this->db->quoteName('profile_key') . ' = ' . $this->db->quote('id4me.identifier'));
+				->select($this->db->quoteName(['p.user_id']))
+				->from($this->db->quoteName('#__user_profiles', 'p'))
+				->from($this->db->quoteName('#__users', 'u'))
+				->where($this->db->quoteName('u.id') . ' = ' . $this->db->quoteName('p.user_id'))
+				->where($this->db->quoteName('p.profile_value') . ' = ' . $this->db->quote($this->app->getUserState('id4me.identifier')))
+				->where($this->db->quoteName('p.profile_key') . ' = ' . $this->db->quote('id4me.identifier'));
 
 		$this->db->setQuery($query);
 
