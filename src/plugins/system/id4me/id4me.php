@@ -160,9 +160,9 @@ class PlgSystemId4me extends CMSPlugin
 		if ((($allowedLoginClient === 'both' || $this->app->isClient($allowedLoginClient)) && Factory::getUser()->guest))
 		{
 			// Load the language string
-			Text::script('PLG_SYSTEM_ID4ME_IDENTIFIER_LABEL');
+			Text::script('PLG_SYSTEM_ID4ME_LOGIN_LABEL');
 
-			// Load the layout with the JaveScript and CSS
+			// Load the layout with the JavaScript and CSS
 			echo $this->loadLayout('login');
 		}
 	}
@@ -179,9 +179,9 @@ class PlgSystemId4me extends CMSPlugin
 		$identifier = $this->app->input->getString('id4me-identifier');
 		$this->app->setUserState('id4me.identifier', $identifier);
 
-		$joomlaUser = $this->getJoomlaUserById4MeIdentifier();
+		$joomlaUser = $this->getUserByIdentifier();
 
-		if ((!($joomlaUser instanceof User) || !$joomlaUser->id) && $this->getId4MeRegistrationEnabled() === false)
+		if (!($joomlaUser instanceof User) || (!$joomlaUser->id && $this->registrationEnabled() === false))
 		{
 			// We don't have an user associated to this identifier and we don't allow registration.
 			$this->app->enqueueMessage(Text::sprintf('PLG_SYSTEM_ID4ME_NO_JOOMLA_USER_FOR_IDENTIFIER', $identifier), 'error');
@@ -246,8 +246,11 @@ class PlgSystemId4me extends CMSPlugin
 	public function onAjaxID4MeLogin()
 	{
 		$code = $this->app->input->get('code');
+		$state = $this->app->input->get('state');
+
 		$client = $this->app->getUserState('id4me.clientInfo');
 		$openIdConfig = $this->app->getUserState('id4me.openIdConfig');
+		$identifier = $this->app->getUserState('id4me.identifier');
 
 		// Prevent __PHP_Incomplete_Class
 		$client = unserialize(serialize($client));
@@ -255,21 +258,29 @@ class PlgSystemId4me extends CMSPlugin
 
 		$authorizedAccessTokens = $this->ID4MeHandler()->getAuthorizationTokens($openIdConfig, $code, $client);
 
+		$decodedToken = $authorizedAccessTokens->getIdTokenDecoded();
+
+		$joomlaUser = $this->getUserByIdentifier();
+
+		$home = $this->app->getMenu()->getDefault();
+
+		if (!($joomlaUser instanceof User) || $state != $this->app->getUserState('id4me.state') || $decodedToken->getId4meIdentifier() != $identifier)
+		{
+			$this->app->enqueueMessage(Text::_('PLG_SYSTEM_ID4ME_LOGIN_FAILED'), 'error');
+			$this->app->redirect(Route::_('index.php?Itemid=' . (int) $home->id, false));
+		}
+
 		$userInfo = $this->ID4MeHandler()->getUserInfo($openIdConfig, $client, $authorizedAccessTokens);
 
-		$joomlaUser = $this->getJoomlaUserById4MeIdentifier();
-
 		// The user does not exists than lets register him
-		if ((!($joomlaUser instanceof User) || !$joomlaUser->id) && $this->getId4MeRegistrationEnabled())
+		if (empty($joomlaUser->id) && $this->registrationEnabled())
 		{
 			$joomlaUser = $this->registerUser($userInfo);
 		}
 
-		$this->app->setUserState('id4me.identifier', '');
+		$issuersub = $decodedToken->getIss() . '#' . $decodedToken->getSub();
 
-		$home = $this->app->getMenu()->getDefault();
-
-		if ($joomlaUser instanceof User && $joomlaUser->id > 0)
+		if ($joomlaUser instanceof User && $joomlaUser->id > 0 && $issuersub != $joomlaUser->id4me_issuersub)
 		{
 			// Load user plugins
 			PluginHelper::importPlugin('user');
@@ -346,6 +357,12 @@ class PlgSystemId4me extends CMSPlugin
 						label="PLG_SYSTEM_ID4ME_IDENTIFIER_LABEL"
 						description="PLG_SYSTEM_ID4ME_IDENTIFIER_DESC"
 					/>
+					<field
+						name="id4me_issuersub"
+						type="hidden"
+						label="PLG_SYSTEM_ID4ME_ISSUERSUB_LABEL"
+						description="PLG_SYSTEM_ID4ME_ISSUERSUB_DESC"
+					/>
 				</fieldset>
 			</form>'
 		);
@@ -370,16 +387,23 @@ class PlgSystemId4me extends CMSPlugin
 		}
 
 		$query = $this->db->getQuery(true)
-			->select($this->db->quoteName(['profile_value']))
-			->from('#__user_profiles')
-			->where($this->db->quoteName('user_id') . ' = ' . Factory::getUser()->id)
-			->where($this->db->quoteName('profile_key') . ' = ' . $this->db->quote('id4me.identifier'));
+				->select($this->db->quoteName(['profile_value', 'profile_key']))
+				->from($this->db->quoteName('#__user_profiles'))
+				->where($this->db->quoteName('user_id') . ' = ' . (int) $data->id)
+				->where($this->db->quoteName('profile_key') . ' IN(' . implode(',', $this->db->quote(['id4me.identifier', 'id4me.issuersub'])) . ')');
 
 		$this->db->setQuery($query);
 
 		try
 		{
-			$data->id4me_identifier = (string) $this->db->loadResult();
+			$id4mes = $this->db->loadObjectList();
+
+			foreach ($id4mes as $id4me)
+			{
+				$id4mekey = str_replace('id4me.', 'id4me_', $id4me->profile_key);
+
+				$data->$id4mekey = $id4me->profile_value;
+			}
 		}
 		catch (\RuntimeException $e)
 		{
@@ -454,26 +478,11 @@ class PlgSystemId4me extends CMSPlugin
 	 */
 	public function onUserAfterSave($data, $isNew, $result, $error)
 	{
-		$userId     = ArrayHelper::getValue($data, 'id', 0, 'int');
-		$identifier = $data['id4me_identifier'];
+		$user_id     = ArrayHelper::getValue($data, 'id', 0, 'int');
+		$identifier  = ArrayHelper::getValue($data, 'id4me_identifier');
+		$issuersub   = ArrayHelper::getValue($data, 'id4me_issuersub');
 
-		$query = $this->db->getQuery(true)
-			->delete($this->db->quoteName('#__user_profiles'))
-			->where($this->db->quoteName('user_id') . ' = ' . (int) $userId)
-			->where($this->db->quoteName('profile_key') . ' = ' . $this->db->quote('id4me.identifier'));
-
-		$this->db->setQuery($query);
-
-		try
-		{
-			$this->db->execute();
-		}
-		catch (\RuntimeException $e)
-		{
-			$this->app->enqueueMessage(Text::_('JERROR_AN_ERROR_HAS_OCCURRED'), 'error');
-
-			return false;
-		}
+		$this->deleteID4ME($user_id);
 
 		$profile = new stdClass;
 
@@ -482,9 +491,17 @@ class PlgSystemId4me extends CMSPlugin
 		$profile->profile_value = $identifier;
 		$profile->ordering = 1;
 
+		$issuersub = new stdClass;
+
+		$issuersub->user_id = (int) $user_id;
+		$issuersub->profile_key = 'id4me.issuersub';
+		$issuersub->profile_value = $identifier;
+		$issuersub->ordering = 1;
+
 		try
 		{
 			$this->db->insertObject('#__user_profiles', $profile);
+			$this->db->insertObject('#__user_profiles', $issuersub);
 		}
 		catch (\RuntimeException $e)
 		{
@@ -497,19 +514,77 @@ class PlgSystemId4me extends CMSPlugin
 	}
 
 	/**
+	 * Remove all user profile information for the given user ID
+	 *
+	 * Method is called after user data is deleted from the database
+	 *
+	 * @param   array    $user     Holds the user data
+	 * @param   boolean  $success  True if user was succesfully stored in the database
+	 * @param   string   $msg      Message
+	 *
+	 * @return  boolean
+	 */
+	public function onUserAfterDelete($user, $success, $msg)
+	{
+		if (!$success)
+		{
+			return false;
+		}
+
+		$user_id = ArrayHelper::getValue($user, 'id', 0, 'int');
+
+		if ($user_id)
+		{
+			$this->deleteID4ME($user_id);
+		}
+
+		return true;
+	}
+
+	/**
+	 * Deletes all id4me profile fields
+	 *
+	 * @param   int  $user_id  The user ID
+	 *
+	 * @return  boolean  True on success otherwise false
+	 */
+	protected function deleteID4ME($user_id)
+	{
+		try
+		{
+			$query = $this->db->getQuery(true)
+					->delete($this->db->quoteName('#__user_profiles'))
+					->where($this->db->quoteName('user_id') . ' = ' . (int) $user_id)
+					->where($this->db->quoteName('profile_key') . ' LIKE ' . $this->db->quote($this->db->escape('id4me.', true) . '%', false));
+
+			$this->db->setQuery($query)->execute();
+		}
+		catch (Exception $e)
+		{
+			$this->_subject->setError($e->getMessage());
+
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
 	 * Get the Joomla User by Id4Me Identifier
 	 *
-	 * @return  mixed  Returns the Joomla User for the Id4Me Identifier or false in case there is no user associated
+	 * @return  mixed  Returns the Joomla User for the Id4Me Identifier or false in case of an error
 	 *
 	 * @since   1.0.0
 	 */
-	protected function getJoomlaUserById4MeIdentifier()
+	protected function getUserByIdentifier()
 	{
 		$query = $this->db->getQuery(true)
-			->select($this->db->quoteName(['user_id']))
-			->from($this->db->quoteName('#__user_profiles'))
-			->where($this->db->quoteName('profile_value') . ' = ' . $this->db->quote($this->app->getUserState('id4me.identifier')))
-			->where($this->db->quoteName('profile_key') . ' = ' . $this->db->quote('id4me.identifier'));
+				->select($this->db->quoteName(['p.user_id']))
+				->from($this->db->quoteName('#__user_profiles', 'p'))
+				->from($this->db->quoteName('#__users', 'u'))
+				->where($this->db->quoteName('u.id') . ' = ' . $this->db->quoteName('p.user_id'))
+				->where($this->db->quoteName('p.profile_value') . ' = ' . $this->db->quote($this->app->getUserState('id4me.identifier')))
+				->where($this->db->quoteName('p.profile_key') . ' = ' . $this->db->quote('id4me.identifier'));
 
 		$this->db->setQuery($query);
 
@@ -563,16 +638,24 @@ class PlgSystemId4me extends CMSPlugin
 
 		if ($result)
 		{
-			$profile = new stdClass;
+			$idprofile = new stdClass;
 
-			$profile->user_id = (int) $table->id;
-			$profile->profile_key = 'id4me.identifier';
-			$profile->profile_value = $identifier;
-			$profile->ordering = 1;
+			$idprofile->user_id = (int) $table->id;
+			$idprofile->profile_key = 'id4me.identifier';
+			$idprofile->profile_value = $identifier;
+			$idprofile->ordering = 1;
+
+			$issuersub = new stdClass;
+
+			$issuersub->user_id = (int) $table->id;
+			$issuersub->profile_key = 'id4me.issuersub';
+			$issuersub->profile_value = $userInfo->getIss() . '#' . $userInfo->getSub();
+			$issuersub->ordering = 1;
 
 			try
 			{
-				$this->db->insertObject('#__user_profiles', $profile);
+				$this->db->insertObject('#__user_profiles', $idprofile);
+				$this->db->insertObject('#__user_profiles', $issuersub);
 			}
 			catch (\RuntimeException $e)
 			{
@@ -592,7 +675,7 @@ class PlgSystemId4me extends CMSPlugin
 	 *
 	 * @since   1.0.0
 	 */
-	protected function getId4MeRegistrationEnabled()
+	protected function registrationEnabled()
 	{
 		// Get the global value as boolean
 		$comUsersRegistation = (bool) ComponentHelper::getParams('com_users')->get('allowUserRegistration', 0);

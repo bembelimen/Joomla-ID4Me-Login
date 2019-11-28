@@ -15,7 +15,7 @@ var Joomla = window.Joomla || {};
         template: '<div class="id4me-wrapper">' +
                     '<form class="id4me-form" method="post" action="' + (options.formAction || '') + '">' +
                       '<div class="id4me-fields id4me-hide row-fluid">' +
-                        '<label>' + Joomla.JText._('PLG_SYSTEM_ID4ME_IDENTIFIER_LABEL') + '</label>' +
+                        '<label>' + Joomla.JText._('PLG_SYSTEM_ID4ME_LOGIN_LABEL') + '</label>' +
                         '<input required name="id4me-identifier" type="text" class="span12">' +
                         '<input type="image" src="' + loginimage + '" class="id4me-login">' +
                         (options.token ? options.token : '') +
