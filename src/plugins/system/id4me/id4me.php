@@ -26,7 +26,6 @@ use Joomla\CMS\User\User;
 use Joomla\CMS\User\UserHelper;
 use Joomla\CMS\Table\Table;
 use Joomla\Utilities\ArrayHelper;
-use Joomla\CMS\Crypt\Crypt;
 
 /**
  * Plugin class for ID4me
