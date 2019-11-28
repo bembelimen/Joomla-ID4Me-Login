@@ -53,8 +53,8 @@ class PlgSystemId4me extends CMSPlugin
 	/**
 	 * Database object.
 	 *
-	 * @var    JDatabaseDriver
-	 * @since  3.8.0
+	 * @var    DatabaseDriver
+	 * @since  1.0.0
 	 */
 	protected $db;
 
@@ -62,6 +62,7 @@ class PlgSystemId4me extends CMSPlugin
 	 * The ID4Me object
 	 *
 	 * @var type
+	 * @since  1.0.0
 	 */
 	protected static $id4me;
 
@@ -124,7 +125,9 @@ class PlgSystemId4me extends CMSPlugin
 	/**
 	 * Creates the ID4Me service
 	 *
-	 * @return Service
+	 * @return  Service
+	 *
+	 * @since   1.0.0
 	 */
 	protected function ID4MeHandler()
 	{
@@ -373,7 +376,7 @@ class PlgSystemId4me extends CMSPlugin
 	 *
 	 * @return  boolean
 	 *
-	 * @since   1.6
+	 * @since   1.0.0
 	 */
 	public function onContentPrepareData($context, $data)
 	{
@@ -608,12 +611,19 @@ class PlgSystemId4me extends CMSPlugin
 		return Factory::getUser($userId);
 	}
 
+	/**
+	 * Register the user as Joomla User with the data provided
+	 *
+	 * @param   UserInfo   $userInfo   The user Info result from the id4me API
+	 *
+	 * @return  User  Returns the newly created Joomla User or false in case there is an error
+	 *
+	 * @since   1.0.0
+	 */
 	protected function registerUser(UserInfo $userInfo)
 	{
-		$params = ComponentHelper::getParams('com_users');
-
-		$table = Table::getInstance('User', 'JTable');
-
+		$params     = ComponentHelper::getParams('com_users');
+		$table      = Table::getInstance('User', 'JTable');
 		$identifier = $this->app->getUserState('id4me.identifier');
 
 		$user = [
