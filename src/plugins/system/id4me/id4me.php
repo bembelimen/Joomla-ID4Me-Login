@@ -15,6 +15,8 @@ use Id4me\RP\Model\ClaimRequest;
 use Id4me\RP\Model\ClaimRequestList;
 use Id4me\RP\Service;
 use Id4me\RP\Model\UserInfo;
+use Joomla\CMS\Application\CMSApplication;
+use Joomla\CMS\Cache\Cache;
 use Joomla\CMS\Component\ComponentHelper;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Language\Text;
@@ -26,7 +28,6 @@ use Joomla\CMS\User\User;
 use Joomla\CMS\User\UserHelper;
 use Joomla\CMS\Table\Table;
 use Joomla\Utilities\ArrayHelper;
-use Joomla\CMS\Application\CMSApplication;
 
 /**
  * Plugin class for ID4me
@@ -182,6 +183,58 @@ class PlgSystemId4me extends CMSPlugin
 	}
 
 	/**
+	 * Wrapper method to cache the client loading
+	 *
+	 * @param   OpenIdConfig  $openIdConfig
+	 * @param   boolean $login
+	 *
+	 * @return  \Id4me\RP\Model\Client;
+	 */
+	public function getID4MEClient(OpenIdConfig $openIdConfig, $login = false)
+	{
+		$client = $this->ID4MeHandler()->register($openIdConfig, $this->app->get('sitename'), $this->getValidateUrl($login), $this->applicationType);
+
+		return $client;
+	}
+
+	/**
+	 * Get a cached version from the client, if available
+	 *
+	 * @param   type $authorityName  The authority as ID
+	 * @param   OpenIdConfig $openIdConfig
+	 * @param   type $login
+	 *
+	 * @return  \Id4me\RP\Model\Client
+	 */
+	protected function getCachedID4MeClient($authorityName, OpenIdConfig $openIdConfig, $login = false)
+	{
+		$options = [
+			// One month
+			'lifetime' => 2592000,
+			'storage' => 'file',
+			'defaultgroup' => 'id4me',
+			'caching' => true
+		];
+
+		$cache = Cache::getInstance('callback', $options);
+
+		$client = $cache->get([$this, 'getID4MEClient'], [$openIdConfig, $login], $authorityName . '-' . (int) $login);
+
+		// Delete cache if loading didn't work
+		if ($client === false)
+		{
+			$cache->clean();
+
+			$this->app->enqueueMessage(Text::_('PLG_SYSTEM_ID4ME_LOGIN_FAILED'), 'error');
+			$this->app->redirect('index.php');
+
+			return false;
+		}
+
+		return $client;
+	}
+
+	/**
 	 * This com_ajax Endpoint detects, based on the identifier, the Issuer and redirects to the login page of the Issuer
 	 *
 	 * @return  void
@@ -195,7 +248,7 @@ class PlgSystemId4me extends CMSPlugin
 
 		$joomlaUser = $this->getUserByIdentifier();
 
-		if (!($joomlaUser instanceof User) || (!$joomlaUser->id && $this->registrationEnabled() === false))
+		if (!($joomlaUser instanceof User) || (empty($joomlaUser->id) && $this->registrationEnabled() === false))
 		{
 			// We don't have an user associated to this identifier and we don't allow registration.
 			$this->app->enqueueMessage(Text::sprintf('PLG_SYSTEM_ID4ME_NO_JOOMLA_USER_FOR_IDENTIFIER', $identifier), 'error');
@@ -223,7 +276,12 @@ class PlgSystemId4me extends CMSPlugin
 
 		$openIdConfig = $this->ID4MeHandler()->getOpenIdConfig($authorityName);
 
-		$client = $this->ID4MeHandler()->register($openIdConfig, $identifier, $this->getValidateUrl(true), $this->applicationType);
+		$client = $this->getCachedID4MeClient($authorityName, $openIdConfig, true);
+
+		if ($client === false)
+		{
+			return false;
+		}
 
 		$state        = UserHelper::genRandomPassword(100);
 
@@ -234,7 +292,7 @@ class PlgSystemId4me extends CMSPlugin
 		$claims = null;
 
 		// We register, so we need some fields
-		if (!($joomlaUser instanceof User))
+		if (empty($joomlaUser->id))
 		{
 			$claims = new ClaimRequestList(
                 new ClaimRequest('given_name', true),
@@ -275,9 +333,14 @@ class PlgSystemId4me extends CMSPlugin
 
 		$openIdConfig = $this->ID4MeHandler()->getOpenIdConfig($authorityName);
 
-		$client = $this->ID4MeHandler()->register($openIdConfig, $identifier, $this->getValidateUrl(), $this->applicationType);
+		$client = $this->getCachedID4MeClient($authorityName, $openIdConfig);
 
-		$state        = UserHelper::genRandomPassword(100);
+		if ($client === false)
+		{
+			return false;
+		}
+
+		$state = UserHelper::genRandomPassword(100);
 
 		$this->app->setUserState('id4me.clientInfo', (object) $client);
 		$this->app->setUserState('id4me.openIdConfig', $openIdConfig);
