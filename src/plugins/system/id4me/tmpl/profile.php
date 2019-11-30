@@ -21,14 +21,11 @@ $js = "
 	{
 	  document.addEventListener('DOMContentLoaded', function()
 	  {
-		if (Joomla.ID4Me && Joomla.ID4Me.login)
+		if (Joomla.ID4Me && Joomla.ID4Me.profile)
 		{
-			Joomla.ID4Me.login('.login > form, form#login-form', {
-				buttonimage: " . json_encode(HTMLHelper::_('image', 'plg_system_id4me/id4me-start-login.svg', '', null, true, 1)) . ",
-				loginimage: " . json_encode(HTMLHelper::_('image', 'plg_system_id4me/id4me-login-button.svg', '', null, true, 1)) . ",
-				token: '" . HTMLHelper::_('form.token') . "',
+			Joomla.ID4Me.profile('jform_id4me_identifier', 'jform_id4me_issuersub', {
 				formAction: '" . str_replace('/administrator/', '/', Route::_(
-					str_replace('{client}', Factory::getApplication()->getName(), self::$formActionLoginUrl))) . "'
+					str_replace('{client}', Factory::getApplication()->getName(), self::$redirectValidateUrl))) . "'
 			});
 		}
 	  });

@@ -1,10 +1,19 @@
+/**
+ * Handle all JS actions
+ *
+ * @copyright   Copyright (C) 2019 Benjamin Trenkle. All rights reserved.
+ * @license     GNU General Public License version 3 or later; see LICENSE
+ */
+
 var Joomla = window.Joomla || {};
 
 (function(document, Joomla)
 {
   document.addEventListener('DOMContentLoaded', function()
   {
-    Joomla.ID4Me = function(element, options)
+    Joomla.ID4Me = {};
+
+	Joomla.ID4Me.login = function(element, options)
     {
       var forms = [].slice.call(document.querySelectorAll(element));
 
@@ -52,6 +61,82 @@ var Joomla = window.Joomla || {};
       {
         appendID4MeButton(form);
       });
-    }
+    };
+
+	Joomla.ID4Me.profile = function(element, verification, options)
+	{
+	  var field = document.getElementById(element);
+      var issuersub = document.getElementById(verification);
+
+      var isvalid = !!(field.value.length && issuersub.value.length);
+
+      var options = Object.assign({
+        template: '<div class="input-append">' +
+                    '{input}' +
+                    '<button type="button" class="id4me-button btn btn-info' + (isvalid ? ' id4me-hide' : '') + '">Verify</button>' +
+                    '<div class="add-on id4me-addon' + (!isvalid ? ' id4me-hide' : '') + '"><span class="text-success icon-ok"></span></div>' +
+                  '</div>',
+        buttonClass: 'id4me-button',
+        addonClass: 'id4me-addon',
+        hideClass: 'id4me-hide',
+      }, options);
+
+      var template = options.template;
+
+      field.insertAdjacentHTML('afterend', template.replace('{input}', field.outerHTML));
+
+      field.parentNode.removeChild(field);
+
+      field = document.getElementById(element);
+
+      var wrapper = field.parentNode;
+
+      if (!field.value.length)
+      {
+        wrapper.querySelector('.' + options.buttonClass).classList.add(options.hideClass);
+      }
+
+      field.addEventListener('change', function()
+      {
+        if (field.value.length)
+        {
+          wrapper.querySelector('.' + options.buttonClass).classList.remove(options.hideClass);
+        }
+        else
+        {
+          wrapper.querySelector('.' + options.buttonClass).classList.add(options.hideClass);
+        }
+
+        wrapper.querySelector('.' + options.addonClass).classList.add(options.hideClass);
+
+        issuersub.value = '';
+      });
+
+      wrapper.querySelector('.' + options.buttonClass).addEventListener('click', function()
+      {
+        var popupoptions = 'width=660,height=620,scrollbars=yes,top=' + (screen.height / 2 - 620 / 2) + ',left=' + (screen.width / 2 - 660 / 2);
+
+        open(options.formAction + '&id4me-identifier=' + field.value, 'id4me-verification', popupoptions);
+      });
+	};
+
+	Joomla.ID4Me.verification = function(element, verification, options)
+	{
+      var issuersub = options.issuersub || '';
+
+      var options = Object.assign({
+        buttonClass: 'id4me-button',
+        addonClass: 'id4me-addon',
+        hideClass: 'id4me-hide',
+      }, options);
+
+	  var field = document.getElementById(element),
+          wrapper = field.parentNode;
+
+      document.getElementById(verification).value = issuersub;
+
+      wrapper.querySelector('.' + options.buttonClass).classList.add(options.hideClass);
+      wrapper.querySelector('.' + options.addonClass).classList.remove(options.hideClass);
+	};
   });
 })(document, Joomla);

@@ -3,8 +3,8 @@
  * @package     Joomla.Plugin
  * @subpackage  System.ID4Me
  *
- * @copyright   Copyright (C) 2005 - 2019 Open Source Matters, Inc. All rights reserved.
- * @license     GNU General Public License version 2 or later; see LICENSE.txt
+ * @copyright   Copyright (C) 2019 Benjamin Trenkle. All rights reserved.
+ * @license     GNU General Public License version 3 or later; see LICENSE
  */
 
 defined('_JEXEC') or die;
