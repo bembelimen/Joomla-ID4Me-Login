@@ -13,8 +13,9 @@ require_once __DIR__ . '/libraries/vendor/autoload.php';
 
 use Id4me\RP\Model\ClaimRequest;
 use Id4me\RP\Model\ClaimRequestList;
-use Id4me\RP\Service;
+use Id4me\RP\Model\OpenIdConfig;
 use Id4me\RP\Model\UserInfo;
+use Id4me\RP\Service;
 use Joomla\CMS\Application\CMSApplication;
 use Joomla\CMS\Cache\Cache;
 use Joomla\CMS\Component\ComponentHelper;
@@ -552,7 +553,7 @@ class PlgSystemId4me extends CMSPlugin
 	public function onContentPrepareData($context, $data)
 	{
 		// Check for the user edit forms
-		if (!in_array($context, $this->supportedContext))
+		if (!in_array($context, $this->supportedContext) || !is_object($data) || empty($data->id))
 		{
 			return true;
 		}
@@ -597,7 +598,7 @@ class PlgSystemId4me extends CMSPlugin
 				->from('#__user_profiles')
 				->where($this->db->quoteName('user_id') . ' <> ' . (int) $data['id'])
 				->where($this->db->quoteName('profile_key') . ' = ' . $this->db->quote('id4me.identifier'))
-				->where($this->db->quoteName(['profile_value']) . ' = ' . $this->db->quote($identifier));
+				->where($this->db->quoteName('profile_value') . ' = ' . $this->db->quote($identifier));
 
 			$this->db->setQuery($query);
 
@@ -614,10 +615,12 @@ class PlgSystemId4me extends CMSPlugin
 
 			foreach ($rows as $row)
 			{
-				if ($row->profile_value === $identifier)
+				if ($row->profile_value === $identifier && (empty($data['id'] || $row->user_id != $data['id'])))
 				{
 					// The identifier is already used
-					throw new InvalidArgumentException(Text::sprintf('PLG_SYSTEM_ID4ME_IDENTIFIER_ALREADY_USED', $identifier));
+					$this->app->enqueueMessage(Text::sprintf('PLG_SYSTEM_ID4ME_IDENTIFIER_ALREADY_USED', $identifier));
+
+					return false;
 				}
 			}
 		}
