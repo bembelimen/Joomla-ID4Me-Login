@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <updates>
 	<update>
-		<name>ID4me 1.0.1</name>
+		<name>ID4me 1.0.2</name>
 		<description>ID4me Plugin</description>
 		<element>id4me</element>
 		<type>plugin</type>
