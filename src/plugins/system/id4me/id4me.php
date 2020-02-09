@@ -176,7 +176,7 @@ class PlgSystemId4me extends CMSPlugin
 			// Load the layout with the JavaScript and CSS
 			require PluginHelper::getLayoutPath('system', 'id4me', 'login');
 		}
-		elseif ($this->app->input->get('option') == 'com_users' && in_array($this->app->input->get('view'), ['profile', 'user']) && $this->app->input->get('layout') == 'edit')
+		elseif (in_array($this->app->input->get('option'), ['com_users', 'com_admin']) && in_array($this->app->input->get('view'), ['profile', 'user']) && $this->app->input->get('layout') == 'edit')
 		{
 			// Load the layout with the JavaScript and CSS
 			require PluginHelper::getLayoutPath('system', 'id4me', 'profile');
