@@ -4,7 +4,7 @@
  * @subpackage  System.ID4Me
  *
  * @copyright   Copyright (C) 2019 Benjamin Trenkle Wicked Software. All rights reserved.
- * @license     GNU General Public License version 2 or later; see LICENSE.txt
+ * @license     GNU General Public License version 3 or later; see LICENSE
  */
 
 defined('_JEXEC') or die;
